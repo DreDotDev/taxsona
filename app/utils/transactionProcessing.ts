@@ -10,12 +10,23 @@ import {
 } from '@solana/spl-token';
 import { WalletInteraction, TokenTransaction, NFTTransaction } from '../types/analytics';
 import { Metaplex } from "@metaplex-foundation/js";
-import { webcrypto } from 'node:crypto';
 
-// Add this if running in a browser environment
-if (typeof window === "undefined") {
-  global.crypto = webcrypto as Crypto;
-}
+// Use dynamic import for node:crypto
+const getCrypto = async () => {
+  if (typeof window === "undefined") {
+    const nodeCrypto = await import('node:crypto');
+    return nodeCrypto.webcrypto;
+  }
+  return window.crypto;
+};
+
+// Initialize crypto
+(async () => {
+  if (typeof window === "undefined") {
+    const cryptoImpl = await getCrypto();
+    (global as any).crypto = cryptoImpl;
+  }
+})();
 
 export const NFT_PROGRAM_IDS = [
   'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s', // Metaplex Token Metadata
