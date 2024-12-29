@@ -126,11 +126,11 @@ const ExpandableStatCard = ({
               </span>
               <div className="text-right">
                 <span className={tx.result > 0 ? 'text-green-400' : 'text-red-400'}>
-                  {tx.result > 0 ? '+' : ''}{(tx.result / LAMPORTS_PER_SOL).toFixed(4)} SOL
+                  {tx.result > 0 ? '+' : '-'}{tx.result.toFixed(4)} SOL
                 </span>
                 {tx.invested > 0 && (
                   <span className="text-xs text-gray-500 ml-2">
-                    (Invested: {(tx.invested / LAMPORTS_PER_SOL).toFixed(4)} SOL)
+                    (Invested: {tx.invested.toFixed(4)} SOL)
                   </span>
                 )}
               </div>
