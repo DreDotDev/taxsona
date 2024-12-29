@@ -2,7 +2,7 @@ import { ParsedTransactionWithMeta, PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { WalletInteraction, TokenTransaction, NFTTransaction } from '../types/analytics';
 
-const NFT_PROGRAM_IDS = [
+export const NFT_PROGRAM_IDS = [
   'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s', // Metaplex
   'p1exdMJcjVao65QdewkaZRUnU6VPSXhus9n2GzWfh98'  // Metaplex Auction
 ];

@@ -17,7 +17,7 @@ const TransactionAnalytics = dynamic(
 export default function Home() {
   return (
     <WalletProvider>
-      <div className="min-h-screen px-4 sm:px-6 lg:px-8 pb-8">
+      <main className="min-h-screen px-4 sm:px-6 lg:px-8 pb-8">
         <div className="max-w-7xl mx-auto py-8 sm:py-12 lg:py-16">
           <div className="text-center space-y-4 sm:space-y-6 mb-8">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-solana-purple via-solana-green to-solana-blue animate-gradient-xy">
@@ -32,11 +32,9 @@ export default function Home() {
             <WalletMultiButton />
           </div>
 
-          <div className="w-full">
-            <TransactionAnalytics />
-          </div>
+          <TransactionAnalytics />
         </div>
-      </div>
+      </main>
     </WalletProvider>
   );
 }
