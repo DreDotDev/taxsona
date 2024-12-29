@@ -1,13 +1,12 @@
 "use client";
 
-import { useWallet } from "@solana/wallet-adapter-react";
-import { useState } from "react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { useState, useEffect } from "react";
 import { 
 	LAMPORTS_PER_SOL, 
 	ParsedTransactionWithMeta,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { getQuickNodeConnection, getTransactionHistory } from "../utils/quicknode";
 import { 
 	AnalyticsData, 
 	WalletInteraction, 
@@ -34,31 +33,53 @@ const determineTransactionType = (tx: ParsedTransactionWithMeta): string => {
 };
 
 const TransactionAnalytics = () => {
-	const { publicKey } = useWallet();
-	const connection = getQuickNodeConnection();
+	const { publicKey, connected } = useWallet();
+	const { connection } = useConnection();
 	const [loading, setLoading] = useState(false);
 	const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
-	const analyzeTransactions = async () => {
-		if (!publicKey) {
-			console.error("No wallet connected");
-			return;
+	// Monitor wallet connection status
+	useEffect(() => {
+		if (connected && publicKey) {
+			console.log("Wallet connected:", publicKey.toBase58());
 		}
+	}, [connected, publicKey]);
 
-		console.log("Analyzing transactions for wallet:", publicKey.toBase58());
-		
-		// Verify connection
-		try {
-			const version = await connection.getVersion();
-			console.log("Connected to Quicknode:", version);
-		} catch (error) {
-			console.error("Failed to connect to Quicknode:", error);
+	// Monitor connection status
+	useEffect(() => {
+		if (connection) {
+			connection.getVersion()
+				.then(version => {
+					console.log("Connected to Solana network:", version);
+				})
+				.catch(err => {
+					console.error("Failed to connect to Solana:", err);
+				});
+		}
+	}, [connection]);
+
+	const analyzeTransactions = async () => {
+		if (!publicKey || !connection) {
+			console.error("No wallet connected:", { 
+				walletConnected: !!connected,
+				hasPublicKey: !!publicKey,
+				hasConnection: !!connection 
+			});
 			return;
 		}
 
 		setLoading(true);
 		try {
-			const signatures = await getTransactionHistory(publicKey.toBase58());
+			console.log("Starting analysis for wallet:", publicKey.toBase58());
+			
+			// Verify connection is still active
+			const version = await connection.getVersion();
+			console.log("Connection verified:", version);
+
+			const signatures = await connection.getSignaturesForAddress(publicKey, {
+				limit: 1000,
+			});
+
 			console.log("Fetched signatures:", signatures.length);
 
 			const walletInteractions = new Map<string, WalletInteraction>();
@@ -68,48 +89,53 @@ const TransactionAnalytics = () => {
 			let totalLoss = 0;
 			const transactionDetails: TransactionDetail[] = [];
 
-			for (const sig of signatures) {
-				try {
-					const tx = await connection.getParsedTransaction(sig.signature, {
-						maxSupportedTransactionVersion: 0,
-					});
-					
-					if (!tx?.meta) {
-						console.log("Skipping transaction - no metadata:", sig.signature);
-						continue;
-					}
+			// Process transactions in batches of 10 to avoid rate limiting
+			for (let i = 0; i < signatures.length; i += 10) {
+				const batch = signatures.slice(i, i + 10);
+				await Promise.all(
+					batch.map(async (sig) => {
+						try {
+							const tx = await connection.getParsedTransaction(sig.signature, {
+								maxSupportedTransactionVersion: 0,
+							});
 
-					processWalletInteractions(tx, publicKey, walletInteractions);
-					processTokenTransactions(tx, publicKey, tokenTxs);
-					processNFTTransactions(tx, publicKey, nftTxs);
+							if (!tx?.meta) return;
 
-					const index = tx.transaction.message.accountKeys.findIndex(
-						(key) => key.pubkey.equals(publicKey)
-					);
+							processWalletInteractions(tx, publicKey, walletInteractions);
+							processTokenTransactions(tx, publicKey, tokenTxs);
+							processNFTTransactions(tx, publicKey, nftTxs);
 
-					if (index !== -1 && tx.meta.postBalances && tx.meta.preBalances) {
-						const balanceChange = (tx.meta.postBalances[index] - tx.meta.preBalances[index]) / LAMPORTS_PER_SOL;
-						if (balanceChange > 0) {
-							totalProfit += balanceChange;
-						} else if (balanceChange < 0) {
-							totalLoss += Math.abs(balanceChange);
+							const index = tx.transaction.message.accountKeys.findIndex(
+								(key) => key.pubkey.equals(publicKey)
+							);
+
+							if (index !== -1 && tx.meta.postBalances && tx.meta.preBalances) {
+								const balanceChange = (tx.meta.postBalances[index] - tx.meta.preBalances[index]) / LAMPORTS_PER_SOL;
+								if (balanceChange > 0) {
+									totalProfit += balanceChange;
+								} else if (balanceChange < 0) {
+									totalLoss += Math.abs(balanceChange);
+								}
+
+								transactionDetails.push({
+									signature: sig.signature,
+									timestamp: new Date(sig.blockTime ? sig.blockTime * 1000 : Date.now()),
+									balanceChange,
+									postBalance: tx.meta.postBalances[index] / LAMPORTS_PER_SOL,
+									type: determineTransactionType(tx)
+								});
+							}
+						} catch (txError) {
+							console.error("Error processing transaction:", sig.signature, txError);
 						}
+					})
+				);
 
-						transactionDetails.push({
-							signature: sig.signature,
-							timestamp: new Date(sig.blockTime ? sig.blockTime * 1000 : Date.now()),
-							balanceChange,
-							postBalance: tx.meta.postBalances[index] / LAMPORTS_PER_SOL,
-							type: determineTransactionType(tx)
-						});
-					}
-				} catch (txError) {
-					console.error("Error processing transaction:", sig.signature, txError);
-					continue;
-				}
+				// Add a small delay between batches to avoid rate limiting
+				await new Promise(resolve => setTimeout(resolve, 100));
 			}
 
-			console.log("Processed transactions:", transactionDetails.length); // Debug log
+			console.log("Processed transactions:", transactionDetails.length);
 
 			setAnalyticsData({
 				stats: {
