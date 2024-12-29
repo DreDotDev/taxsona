@@ -2,7 +2,12 @@
 
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useState } from "react";
-import { LAMPORTS_PER_SOL, ParsedTransactionWithMeta } from "@solana/web3.js";
+import { 
+	LAMPORTS_PER_SOL, 
+	ParsedTransactionWithMeta, 
+	PartiallyDecodedInstruction, 
+	PublicKey 
+} from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { getQuickNodeConnection, getTransactionHistory } from "../utils/quicknode";
 import { 
@@ -21,8 +26,17 @@ import {
 	NFT_PROGRAM_IDS 
 } from "../utils/transactionProcessing";
 
+interface ParsedInstruction extends PartiallyDecodedInstruction {
+	programId: PublicKey;
+	parsed?: {
+		type: string;
+	};
+}
+
 const determineTransactionType = (tx: ParsedTransactionWithMeta): string => {
-	const programs = tx.transaction.message.instructions.map((ix: any) => ix.programId.toString());
+	const programs = tx.transaction.message.instructions.map((ix) => 
+		'programId' in ix ? ix.programId.toString() : ''
+	);
 	if (programs.includes(TOKEN_PROGRAM_ID.toString())) return 'Token Transfer';
 	if (programs.some((p: string) => NFT_PROGRAM_IDS.includes(p))) return 'NFT Transaction';
 	return 'SOL Transfer';
