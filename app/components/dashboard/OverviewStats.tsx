@@ -5,27 +5,7 @@ import { calculateTokenPnL } from '../../utils/transactionProcessing';
 import { getQuickNodeConnection } from '../../utils/quicknode';
 
 const OverviewStats = ({ data, walletAddress }: { data: AnalyticsData; walletAddress: string }) => {
-  const [profitLoss, setProfitLoss] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPnL = async () => {
-      try {
-        const connection = getQuickNodeConnection();
-        const pnl = await calculateTokenPnL(walletAddress, connection);
-        setProfitLoss(pnl);
-      } catch (error) {
-        console.error('Error fetching P&L:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (walletAddress) {
-      fetchPnL();
-    }
-  }, [walletAddress]);
-
+  const profitLoss = data.stats.realizedPnL;
   const totalVolumeSol = data.totalVolume / LAMPORTS_PER_SOL;
   const isProfit = profitLoss > 0;
   
@@ -39,10 +19,10 @@ const OverviewStats = ({ data, walletAddress }: { data: AnalyticsData; walletAdd
       />
       <StatCard
         title="Net P&L"
-        value={isLoading ? 'Loading...' : `${isProfit ? '+' : ''}${profitLoss.toFixed(2)} SOL`}
+        value={`${isProfit ? '+' : ''}${profitLoss.toFixed(2)} SOL`}
         icon="💰"
         subtitle="Realized profit/loss from trades"
-        valueClassName={isLoading ? 'text-gray-400' : isProfit ? 'text-green-400' : 'text-red-400'}
+        valueClassName={isProfit ? 'text-green-400' : 'text-red-400'}
       />
       <StatCard
         title="Unique Wallets"
