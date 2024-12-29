@@ -22,7 +22,7 @@ const TransactionLog = ({ transactions }: { transactions: TransactionDetail[] })
   );
 
   return (
-    <div className="backdrop-blur-xl bg-black/30 rounded-xl p-6 border border-solana-purple/20">
+    <div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold font-mono bg-gradient-to-r from-solana-purple to-solana-green bg-clip-text text-transparent">
           Transaction History

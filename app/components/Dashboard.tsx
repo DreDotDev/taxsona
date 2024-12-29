@@ -20,7 +20,7 @@ const Dashboard = ({ data }: { data: AnalyticsData }) => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-dark-DEFAULT dark:bg-dark-DEFAULT space-y-6">
       <div className="flex overflow-x-auto scrollbar-hide">
         <div className="flex space-x-2 p-1 bg-black/20 backdrop-blur-xl rounded-lg border border-solana-purple/20">
           {tabs.map(tab => (

@@ -20,6 +20,11 @@ module.exports = {
         'solana-purple': '#9945FF',
         'solana-green': '#14F195',
         'solana-blue': '#00C2FF',
+        dark: {
+          DEFAULT: '#121212',
+          secondary: '#1e1e1e',
+          surface: '#242424',
+        },
       },
     },
   },

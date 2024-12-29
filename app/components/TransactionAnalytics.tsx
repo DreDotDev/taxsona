@@ -166,7 +166,7 @@ const TransactionAnalytics = () => {
 	};
 
 	return (
-		<div className="backdrop-blur-xl bg-white/10 shadow-2xl rounded-lg p-4 sm:p-6 w-full max-w-full">
+		<div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg">
 			<button onClick={analyzeTransactions} disabled={!publicKey || loading} className="w-full mb-4 sm:mb-6 py-2 sm:py-3 rounded-xl font-mono text-sm sm:text-base bg-gradient-to-r from-solana-purple to-solana-green disabled:opacity-50">
 				{loading ? "Analyzing..." : "Analyze Transactions"}
 			</button>

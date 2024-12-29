@@ -7,7 +7,7 @@ const OverviewStats = ({ data }: { data: AnalyticsData }) => {
   const isProfit = data.stats.netBalance >= 0;
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <StatCard
         title="Total Volume"
         value={`${totalVolumeSol.toFixed(2)} SOL`}
