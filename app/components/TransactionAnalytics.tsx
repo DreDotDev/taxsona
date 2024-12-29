@@ -22,6 +22,7 @@ import {
 	calculateTotalVolume,
 	NFT_PROGRAM_IDS 
 } from "../utils/transactionProcessing";
+import LoadingAnimation from './LoadingAnimation';
 
 const determineTransactionType = (tx: ParsedTransactionWithMeta): string => {
 	const programs = tx.transaction.message.instructions.map((ix) => 
@@ -171,11 +172,7 @@ const TransactionAnalytics = () => {
 				{loading ? "Analyzing..." : "Analyze Transactions"}
 			</button>
 			
-			{loading && (
-				<div className="text-center py-4">
-					<p className="text-sm text-gray-400">Analyzing your transactions...</p>
-				</div>
-			)}
+			{loading && <LoadingAnimation />}
 
 			{!loading && analyticsData && (
 				<div className="w-full overflow-x-auto">
