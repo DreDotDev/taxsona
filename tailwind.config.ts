@@ -10,7 +10,16 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter var', ...defaultTheme.fontFamily.sans],
+        sans: ['var(--font-geist-sans)', ...defaultTheme.fontFamily.sans],
+        mono: ['var(--font-geist-mono)', ...defaultTheme.fontFamily.mono],
+      },
+      animation: {
+        'gradient-xy': 'gradient-xy 15s ease infinite',
+      },
+      colors: {
+        'solana-purple': '#9945FF',
+        'solana-green': '#14F195',
+        'solana-blue': '#00C2FF',
       },
     },
   },
