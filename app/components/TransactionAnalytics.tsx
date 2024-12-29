@@ -2,12 +2,20 @@
 
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { useState } from 'react';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL, ParsedTransactionWithMeta } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 interface TransactionStats {
   totalProfit: number;
   totalLoss: number;
   netBalance: number;
+}
+
+interface TokenTransaction {
+  tokenAddress: string;
+  amount: number;
+  type: 'buy' | 'sell';
+  timestamp: number;
 }
 
 const TransactionAnalytics = () => {
@@ -37,17 +45,67 @@ const TransactionAnalytics = () => {
       setHasTransactions(true);
       let totalProfit = 0;
       let totalLoss = 0;
+      const tokenTransactions: TokenTransaction[] = [];
 
       for (const sig of signatures) {
-        const tx = await connection.getTransaction(sig.signature, {
+        const tx = await connection.getParsedTransaction(sig.signature, {
           maxSupportedTransactionVersion: 0
-        });
-        if (tx?.meta?.postBalances && tx?.meta?.preBalances) {
+        }) as ParsedTransactionWithMeta | null;
+
+        if (!tx) continue;
+
+        // Track token transfers
+        if (tx.meta && tx.transaction.message.instructions) {
+          const tokenTransfers = tx.meta.innerInstructions?.flatMap(ix => 
+            ix.instructions.filter(instruction => 
+              'programId' in instruction && 
+              instruction.programId.equals(TOKEN_PROGRAM_ID)
+            )
+          ) || [];
+
+          for (const transfer of tokenTransfers) {
+            if ('parsed' in transfer && transfer.parsed.type === 'transfer') {
+              const amount = transfer.parsed.info.amount / LAMPORTS_PER_SOL;
+              const isReceiving = transfer.parsed.info.destination === publicKey.toBase58();
+              
+              tokenTransactions.push({
+                tokenAddress: transfer.parsed.info.mint,
+                amount: amount,
+                type: isReceiving ? 'buy' : 'sell',
+                timestamp: tx.blockTime || 0
+              });
+            }
+          }
+        }
+
+        // Calculate SOL balance changes
+        if (tx.meta?.postBalances && tx.meta?.preBalances) {
           const balanceChange = (tx.meta.postBalances[0] - tx.meta.preBalances[0]) / LAMPORTS_PER_SOL;
           if (balanceChange > 0) {
             totalProfit += balanceChange;
           } else {
             totalLoss += Math.abs(balanceChange);
+          }
+        }
+      }
+
+      // Calculate token profits/losses
+      tokenTransactions.sort((a, b) => a.timestamp - b.timestamp);
+      for (let i = 0; i < tokenTransactions.length; i++) {
+        const tx = tokenTransactions[i];
+        if (tx.type === 'sell') {
+          // Find matching buy transaction
+          const buyTx = tokenTransactions.slice(0, i).find(t => 
+            t.type === 'buy' && t.tokenAddress === tx.tokenAddress
+          );
+          
+          if (buyTx) {
+            const profit = tx.amount - buyTx.amount;
+            if (profit > 0) {
+              totalProfit += profit;
+            } else {
+              totalLoss += Math.abs(profit);
+            }
           }
         }
       }
@@ -59,8 +117,9 @@ const TransactionAnalytics = () => {
       });
     } catch (error) {
       console.error('Error analyzing transactions:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
