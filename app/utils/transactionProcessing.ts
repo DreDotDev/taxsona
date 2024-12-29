@@ -6,7 +6,6 @@ import {
   SystemProgram
 } from '@solana/web3.js';
 import { 
-  TOKEN_PROGRAM_ID,
   getAccount,
   getMint
 } from '@solana/spl-token';
