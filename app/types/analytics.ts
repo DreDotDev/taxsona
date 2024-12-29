@@ -48,6 +48,8 @@ export interface AnalyticsData {
   transactionLog: TransactionDetail[];
   stats: {
     realizedPnL: number;
+    totalProfit: number;
+    totalLoss: number;
     netBalance?: number;
   };
   walletAddress: string;

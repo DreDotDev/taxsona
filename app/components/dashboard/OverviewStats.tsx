@@ -10,7 +10,7 @@ const OverviewStats = ({ data, walletAddress }: { data: AnalyticsData; walletAdd
   const isProfit = profitLoss > 0;
   
   return (
-    <div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <StatCard
         title="Total Volume"
         value={`${totalVolumeSol.toFixed(2)} SOL`}
@@ -18,17 +18,25 @@ const OverviewStats = ({ data, walletAddress }: { data: AnalyticsData; walletAdd
         subtitle="All-time trading volume"
       />
       <StatCard
+        title="Total Profit"
+        value={`+${(data.stats.totalProfit || 0).toFixed(2)} SOL`}
+        icon="📈"
+        subtitle="Sum of profitable trades"
+        valueClassName="text-green-400"
+      />
+      <StatCard
+        title="Total Loss"
+        value={`-${(data.stats.totalLoss || 0).toFixed(2)} SOL`}
+        icon="📉"
+        subtitle="Sum of unprofitable trades"
+        valueClassName="text-red-400"
+      />
+      <StatCard
         title="Net P&L"
         value={`${isProfit ? '+' : ''}${profitLoss.toFixed(2)} SOL`}
         icon="💰"
-        subtitle="Realized profit/loss from trades"
+        subtitle="Overall profit/loss"
         valueClassName={isProfit ? 'text-green-400' : 'text-red-400'}
-      />
-      <StatCard
-        title="Unique Wallets"
-        value={data.uniqueWallets.toString()}
-        icon="👥"
-        subtitle="Distinct addresses"
       />
       <StatCard
         title="Total Transactions"
