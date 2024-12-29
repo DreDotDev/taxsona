@@ -5,7 +5,7 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 const TokenActivity = ({ transactions }: { transactions: TokenTransaction[] }) => {
   const tokenStats = useMemo(() => {
     return transactions.reduce((acc, tx) => {
-      const key = tx.tokenSymbol;
+      const key = tx.mint || 'SOL';
       if (!acc[key]) {
         acc[key] = {
           volume: 0,

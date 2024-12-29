@@ -1,6 +1,6 @@
 import { ParsedTransactionWithMeta, PublicKey, LAMPORTS_PER_SOL, Connection, SystemProgram } from "@solana/web3.js";
 import { getAccount, getMint } from "@solana/spl-token";
-import { WalletInteraction, TokenTransaction, NFTTransaction } from "../types/analytics";
+import { WalletInteraction, NFTTransaction } from "../types/analytics";
 import { Metaplex } from "@metaplex-foundation/js";
 
 // Define a union type for both browser and node crypto implementations
@@ -86,6 +86,16 @@ export const processWalletInteractions = async (tx: ParsedTransactionWithMeta, u
 	});
 };
 
+export interface TokenTransaction {
+	signature: string;
+	amount: number;
+	price: number;
+	type: 'buy' | 'sell';
+	timestamp: number;
+	mint?: string;      // Optional mint address
+	txHash?: string;    // Optional transaction hash
+}
+
 export const processTokenTransactions = async (tx: ParsedTransactionWithMeta, userWallet: PublicKey, connection: Connection): Promise<TokenTransaction[]> => {
 	const tokenTxs: TokenTransaction[] = [];
 	if (!tx.meta) return tokenTxs;
@@ -110,12 +120,12 @@ export const processTokenTransactions = async (tx: ParsedTransactionWithMeta, us
 			if (!tokenAccount.owner.equals(userWallet)) continue;
 
 			tokenTxs.push({
-				tokenSymbol: tokenAccount.mint.toBase58(),
+				signature: tx.transaction.signatures[0],
 				amount: Math.abs(balanceChange),
 				type: balanceChange > 0 ? "buy" : "sell",
 				price: Math.abs(solChange),
 				timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
-				txHash: tx.transaction.signatures[0]
+				mint: tokenAccount.mint.toBase58()
 			});
 		} catch (error) {
 			console.error("Error processing token transaction:", error);
@@ -177,7 +187,10 @@ export const processNFTTransactions = async (tx: ParsedTransactionWithMeta, user
 	return nftTxs;
 };
 
-export const calculateTotalVolume = (tokenTxs: TokenTransaction[], nftTxs: NFTTransaction[]): number => {
+export const calculateTotalVolume = (
+	tokenTxs: { price: number }[], 
+	nftTxs: { price: number }[]
+): number => {
 	// Calculate token volume (only count the SOL value)
 	const tokenVolume = tokenTxs.reduce((sum, tx) => {
 		return sum + (tx.price || 0);
@@ -198,32 +211,86 @@ export const calculateRealizedPnL = (transactions: TokenTransaction[]): number =
 	const sortedTransactions = [...transactions].sort((a, b) => a.timestamp - b.timestamp);
 
 	for (const tx of sortedTransactions) {
-		const { tokenSymbol, amount, price, type } = tx;
+		const { mint, amount, price, type } = tx;
+		const tokenKey = mint || 'SOL'; // Use mint address as key, fallback to 'SOL' for SOL transactions
 		
-		if (!tokenPositions[tokenSymbol]) {
-			tokenPositions[tokenSymbol] = { totalCost: 0, totalTokens: 0 };
+		if (!tokenPositions[tokenKey]) {
+			tokenPositions[tokenKey] = { totalCost: 0, totalTokens: 0 };
 		}
 
-		const position = tokenPositions[tokenSymbol];
+		const position = tokenPositions[tokenKey];
 
 		if (type === 'buy') {
 			position.totalCost += amount * price;
 			position.totalTokens += amount;
 		} else if (type === 'sell') {
 			if (position.totalTokens > 0) {
-				// Calculate average cost basis
 				const avgCostPerToken = position.totalCost / position.totalTokens;
-				// Calculate realized PnL for this sale
 				const saleProceeds = amount * price;
 				const costBasis = amount * avgCostPerToken;
 				realizedPnL += saleProceeds - costBasis;
 				
-				// Update position
 				position.totalTokens -= amount;
 				position.totalCost = position.totalTokens * avgCostPerToken;
 			}
 		}
 	}
 
-	return realizedPnL * LAMPORTS_PER_SOL; // Convert to lamports
+	return realizedPnL * LAMPORTS_PER_SOL;
 };
+
+export async function calculateTokenPnL(walletAddress: string, connection: Connection): Promise<number> {
+	try {
+		const pubKey = new PublicKey(walletAddress);
+		
+		// Fetch all signatures for the address
+		const signatures = await connection.getSignaturesForAddress(pubKey, {
+			limit: 1000, // Adjust limit as needed
+		});
+
+		const transactions: TokenTransaction[] = [];
+		
+		// Fetch and parse transaction details
+		for (const sig of signatures) {
+			const tx = await connection.getParsedTransaction(sig.signature, {
+				maxSupportedTransactionVersion: 0,
+			});
+			
+			if (!tx?.meta || !tx.transaction) continue;
+
+			// Look for token transfers in the transaction
+			const preBalances = tx.meta.preBalances;
+			const postBalances = tx.meta.postBalances;
+			
+			// Calculate the SOL difference
+			const index = tx.transaction.message.accountKeys.findIndex(
+				key => key.pubkey.toString() === walletAddress
+			);
+			
+			if (index !== -1) {
+				const balanceChange = (postBalances[index] - preBalances[index]) / LAMPORTS_PER_SOL;
+				
+				if (balanceChange !== 0) {
+					transactions.push({
+						signature: sig.signature,
+						amount: Math.abs(balanceChange),
+						price: 1, // For SOL tokens, price is 1
+						type: balanceChange < 0 ? 'sell' : 'buy',
+						timestamp: sig.blockTime || 0,
+					});
+				}
+			}
+		}
+
+		// Calculate net P&L
+		let netPnL = 0;
+		for (const tx of transactions) {
+			netPnL += tx.type === 'sell' ? tx.amount : -tx.amount;
+		}
+
+		return netPnL;
+	} catch (error) {
+		console.error('Error calculating token P&L:', error);
+		return 0;
+	}
+}

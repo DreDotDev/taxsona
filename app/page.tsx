@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { WalletProvider } from '../app/components/WalletProvider';
+import { WalletProvider } from './components/WalletProvider';
 
 // Dynamically import components that need client-side functionality
 const WalletMultiButton = dynamic(

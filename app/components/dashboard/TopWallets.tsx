@@ -3,7 +3,7 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 const TopWallets = ({ wallets }: { wallets: WalletInteraction[] }) => {
   return (
-    <div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg backdrop-blur-xl bg-black/30 rounded-xl p-6 border border-solana-purple/20">
+    <div className="bg-dark-secondary dark:bg-dark-secondary shadow-lg backdrop-blur-xl bg-black/30 rounded-xl p-6 border border-solana-purple/20">
       <h2 className="text-xl font-bold mb-6 font-mono bg-gradient-to-r from-solana-purple to-solana-green bg-clip-text text-transparent">
         Top Interacting Wallets
       </h2>

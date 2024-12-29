@@ -84,7 +84,10 @@ const TransactionAnalytics = () => {
 
 							// Process token transactions
 							const tokenTransactions = await processTokenTransactions(tx, publicKey, connection);
-							tokenTxs.push(...tokenTransactions);
+							tokenTxs.push(...tokenTransactions.map(tx => ({
+								...tx,
+								mint: tx.mint || 'Unknown Token'
+							})));
 
 							// Process NFT transactions
 							const nftTransactions = await processNFTTransactions(tx, publicKey, connection);
@@ -155,18 +158,22 @@ const TransactionAnalytics = () => {
 
 			setAnalyticsData({
 				stats: {
-					netBalance: totalProfit - totalLoss,
-					totalVolume,
-					realizedPnL: totalProfit - totalLoss
+					realizedPnL: totalProfit - totalLoss,
+					netBalance: totalProfit - totalLoss
 				},
 				topWallets: Array.from(walletInteractions.values())
 					.sort((a, b) => b.totalSent - a.totalSent)
 					.slice(0, 10),
-				tokenTransactions: tokenTxs,
+				tokenTransactions: tokenTxs.map(tx => ({
+					...tx,
+					tokenSymbol: tx.mint || 'SOL',
+					txHash: tx.signature
+				})),
 				nftTransactions: nftTxs,
 				totalVolume,
 				uniqueWallets: walletInteractions.size,
 				transactionLog: transactionDetails.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+				walletAddress: publicKey.toBase58()
 			});
 		} catch (error) {
 			console.error("Analysis failed:", error);

@@ -1,10 +1,33 @@
+import { useEffect, useState } from 'react';
 import { AnalyticsData } from '../../types/analytics';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { calculateTokenPnL } from '../../utils/transactionProcessing';
+import { getQuickNodeConnection } from '../../utils/quicknode';
 
-const OverviewStats = ({ data }: { data: AnalyticsData }) => {
+const OverviewStats = ({ data, walletAddress }: { data: AnalyticsData; walletAddress: string }) => {
+  const [profitLoss, setProfitLoss] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPnL = async () => {
+      try {
+        const connection = getQuickNodeConnection();
+        const pnl = await calculateTokenPnL(walletAddress, connection);
+        setProfitLoss(pnl);
+      } catch (error) {
+        console.error('Error fetching P&L:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (walletAddress) {
+      fetchPnL();
+    }
+  }, [walletAddress]);
+
   const totalVolumeSol = data.totalVolume / LAMPORTS_PER_SOL;
-  const profitLoss = (data.stats.realizedPnL / LAMPORTS_PER_SOL).toFixed(2);
-  const isProfit = data.stats.realizedPnL > 0;
+  const isProfit = profitLoss > 0;
   
   return (
     <div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -16,10 +39,10 @@ const OverviewStats = ({ data }: { data: AnalyticsData }) => {
       />
       <StatCard
         title="Net P&L"
-        value={`${isProfit ? '+' : ''}${profitLoss} SOL`}
+        value={isLoading ? 'Loading...' : `${isProfit ? '+' : ''}${profitLoss.toFixed(2)} SOL`}
         icon="💰"
         subtitle="Realized profit/loss from trades"
-        valueClassName={isProfit ? 'text-green-400' : 'text-red-400'}
+        valueClassName={isLoading ? 'text-gray-400' : isProfit ? 'text-green-400' : 'text-red-400'}
       />
       <StatCard
         title="Unique Wallets"
