@@ -5,13 +5,13 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 const TokenActivity = ({ transactions }: { transactions: TokenTransaction[] }) => {
   const tokenStats = useMemo(() => {
     return transactions.reduce((acc, tx) => {
-      const key = tx.tokenAddress;
+      const key = tx.tokenSymbol;
       if (!acc[key]) {
         acc[key] = {
           volume: 0,
           buys: 0,
           sells: 0,
-          lastPrice: tx.price || 0,
+          lastPrice: tx.price,
           totalValue: 0
         };
       }
