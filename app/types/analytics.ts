@@ -1,5 +1,3 @@
-import { PublicKey } from '@solana/web3.js';
-
 export interface TransactionStats {
   totalProfit: number;
   totalLoss: number;
@@ -31,6 +29,15 @@ export interface NFTTransaction {
   timestamp: number;
 }
 
+export interface TransactionDetail {
+  signature: string;
+  timestamp: Date;
+  balanceChange: number;
+  postBalance: number;
+  type?: string;
+  description?: string;
+}
+
 export interface AnalyticsData {
   stats: TransactionStats;
   topWallets: WalletInteraction[];
@@ -38,4 +45,5 @@ export interface AnalyticsData {
   nftTransactions: NFTTransaction[];
   totalVolume: number;
   uniqueWallets: number;
+  transactionLog: TransactionDetail[];
 } 

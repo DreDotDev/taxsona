@@ -9,7 +9,7 @@ import Dashboard from "./Dashboard";
 import { processWalletInteractions, processTokenTransactions, processNFTTransactions, calculateTotalVolume } from "../utils/transactionProcessing";
 
 const TransactionAnalytics = () => {
-	const { publicKey, connected } = useWallet();
+	const { publicKey } = useWallet();
 	const connection = getQuickNodeConnection();
 	const [loading, setLoading] = useState(false);
 	const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
@@ -66,6 +66,12 @@ const TransactionAnalytics = () => {
 				nftTransactions: nftTxs,
 				totalVolume: calculateTotalVolume(tokenTxs, nftTxs),
 				uniqueWallets: walletInteractions.size,
+				transactionLog: signatures.map(sig => ({
+					signature: sig.signature,
+					timestamp: new Date(sig.blockTime ?? 0 * 1000),
+					balanceChange: 0,
+					postBalance: 0,
+				}))
 			});
 		} catch (error) {
 			console.error("Analysis failed:", error);
