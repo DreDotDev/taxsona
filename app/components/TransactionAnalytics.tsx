@@ -40,23 +40,17 @@ const TransactionAnalytics = () => {
 	const [progress, setProgress] = useState(0);
 	const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
-	// Monitor wallet connection status
 	useEffect(() => {
 		if (connected && publicKey) {
 			console.log("Wallet connected:", publicKey.toBase58());
 		}
 	}, [connected, publicKey]);
 
-	// Monitor connection status
 	useEffect(() => {
 		if (connection) {
 			connection.getVersion()
-				.then(version => {
-					console.log("Connected to Solana network:", version);
-				})
-				.catch(err => {
-					console.error("Failed to connect to Solana:", err);
-				});
+				.then(version => console.log("Connected to Solana network:", version))
+				.catch(err => console.error("Failed to connect to Solana:", err));
 		}
 	}, [connection]);
 
@@ -68,11 +62,12 @@ const TransactionAnalytics = () => {
 
 		setLoading(true);
 		setProgress(0);
+		
 		try {
 			console.log("Starting analysis for wallet:", publicKey.toBase58());
 			
 			const signatures = await connection.getSignaturesForAddress(publicKey, {
-				limit: 1000,
+					limit: 1000,
 			});
 
 			console.log("Fetched signatures:", signatures.length);
@@ -80,15 +75,14 @@ const TransactionAnalytics = () => {
 			const walletInteractions = new Map<string, WalletInteraction>();
 			const tokenTxs: TokenTransaction[] = [];
 			const nftTxs: NFTTransaction[] = [];
+			const transactionDetails: TransactionDetail[] = [];
 			let totalProfit = 0;
 			let totalLoss = 0;
-			const transactionDetails: TransactionDetail[] = [];
 
-			// Calculate progress increment per transaction
 			const progressIncrement = 100 / signatures.length;
 			let processedCount = 0;
 
-			// Process transactions in smaller batches
+			// Process transactions in batches of 5
 			for (let i = 0; i < signatures.length; i += 5) {
 				const batch = signatures.slice(i, i + 5);
 				
@@ -119,25 +113,26 @@ const TransactionAnalytics = () => {
 
 							if (accountIndex >= 0) {
 								const balanceChange = 
-									(tx.meta.postBalances[accountIndex] - tx.meta.preBalances[accountIndex]) / 
-									LAMPORTS_PER_SOL;
+									(tx.meta.postBalances[accountIndex] - tx.meta.preBalances[accountIndex]);
 
-								if (balanceChange > 0) {
-									totalProfit += balanceChange;
+								// Convert to SOL and update totals
+								const balanceChangeInSol = balanceChange / LAMPORTS_PER_SOL;
+
+								if (balanceChangeInSol > 0) {
+									totalProfit += balanceChangeInSol;
 								} else {
-									totalLoss += Math.abs(balanceChange);
+									totalLoss += Math.abs(balanceChangeInSol);
 								}
 
 								transactionDetails.push({
 									signature: sig.signature,
 									timestamp: new Date(sig.blockTime ? sig.blockTime * 1000 : Date.now()),
-									balanceChange,
+									balanceChange: balanceChangeInSol,
 									postBalance: tx.meta.postBalances[accountIndex] / LAMPORTS_PER_SOL,
 									type: determineTransactionType(tx)
 								});
 							}
 
-							// Update progress after each transaction
 							processedCount++;
 							setProgress((processedCount * progressIncrement));
 						} catch (txError) {
@@ -150,6 +145,14 @@ const TransactionAnalytics = () => {
 				await new Promise(resolve => setTimeout(resolve, 100));
 			}
 
+			const totalVolume = calculateTotalVolume(tokenTxs, nftTxs);
+			console.log("Analysis complete:", {
+				totalProfit,
+				totalLoss,
+				totalVolume,
+				uniqueWallets: walletInteractions.size
+			});
+
 			setAnalyticsData({
 				stats: {
 					totalProfit,
@@ -161,7 +164,7 @@ const TransactionAnalytics = () => {
 					.slice(0, 10),
 				tokenTransactions: tokenTxs,
 				nftTransactions: nftTxs,
-				totalVolume: calculateTotalVolume(tokenTxs, nftTxs),
+				totalVolume,
 				uniqueWallets: walletInteractions.size,
 				transactionLog: transactionDetails.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 			});
@@ -169,6 +172,7 @@ const TransactionAnalytics = () => {
 			console.error("Analysis failed:", error);
 		} finally {
 			setLoading(false);
+			setProgress(0);
 		}
 	};
 

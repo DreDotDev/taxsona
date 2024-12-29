@@ -18,6 +18,8 @@ const LoadingAnimation = ({ progress }: LoadingAnimationProps) => {
           'Mining for transactions',
           'Crunching numbers',
           'Analyzing patterns',
+          'woah thats a big one...',
+          'uhhhh',
           'Almost there'
         ];
         const currentIndex = texts.indexOf(prev);

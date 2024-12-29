@@ -55,27 +55,28 @@ export const processWalletInteractions = async (
 
   const accounts = tx.transaction.message.accountKeys;
   const timestamp = tx.blockTime ? new Date(tx.blockTime * 1000) : new Date();
-
-  // Find user wallet index
   const userWalletIndex = accounts.findIndex(account => account.pubkey.equals(userWallet));
+  
   if (userWalletIndex === -1) return;
 
-  // Calculate user's balance change
   const userPreBalance = tx.meta.preBalances[userWalletIndex];
   const userPostBalance = tx.meta.postBalances[userWalletIndex];
   const userBalanceChange = userPostBalance - userPreBalance;
 
-  // Only process if there was an actual balance change
-  if (userBalanceChange !== 0) {
-    for (let index = 0; index < accounts.length; index++) {
-      if (index === userWalletIndex) continue;
-      
-      const account = accounts[index];
-      const address = account.pubkey.toBase58();
-      
-      // Skip program accounts and system program
-      if (account.signer || account.pubkey.equals(SystemProgram.programId)) continue;
+  // Skip if no balance change
+  if (userBalanceChange === 0) return;
 
+  // Find the other party in the transaction
+  accounts.forEach((account, index) => {
+    if (index === userWalletIndex || account.pubkey.equals(SystemProgram.programId)) return;
+
+    const otherPreBalance = tx.meta!.preBalances[index];
+    const otherPostBalance = tx.meta!.postBalances[index];
+    const otherBalanceChange = otherPostBalance - otherPreBalance;
+
+    // Only process if there was a meaningful balance change
+    if (Math.abs(otherBalanceChange) > 5000) { // Filter out dust/fee changes
+      const address = account.pubkey.toBase58();
       const currentInteraction = interactions.get(address) || {
         address,
         totalSent: 0,
@@ -84,20 +85,17 @@ export const processWalletInteractions = async (
         transactionCount: 0
       };
 
-      // If user lost SOL, this account received it (minus fees)
-      if (userBalanceChange < 0) {
-        currentInteraction.totalReceived += Math.abs(userBalanceChange) / LAMPORTS_PER_SOL;
-      }
-      // If user gained SOL, this account sent it
-      else {
-        currentInteraction.totalSent += userBalanceChange / LAMPORTS_PER_SOL;
+      if (userBalanceChange < 0 && otherBalanceChange > 0) {
+        currentInteraction.totalReceived += Math.abs(userBalanceChange);
+      } else if (userBalanceChange > 0 && otherBalanceChange < 0) {
+        currentInteraction.totalSent += userBalanceChange;
       }
 
       currentInteraction.transactionCount++;
       currentInteraction.lastInteraction = timestamp;
       interactions.set(address, currentInteraction);
     }
-  }
+  });
 };
 
 export const processTokenTransactions = async (
