@@ -95,12 +95,22 @@ const TransactionAnalytics = () => {
 
 							if (accountIndex >= 0) {
 								// Calculate direct SOL transfer balance change
-								const solBalanceChange = tx.meta.postBalances[accountIndex] - tx.meta.preBalances[accountIndex];
+								const solBalanceChange = (tx.meta.postBalances[accountIndex] - tx.meta.preBalances[accountIndex]);
 
 								// Add balance changes from token and NFT transactions
-								const tokenChange = tokenTransactions.reduce((sum, tx) => sum + (tx.type === "buy" ? -tx.price! : tx.price!) * LAMPORTS_PER_SOL, 0);
+								const tokenChange = tokenTransactions.reduce((sum, tx) => {
+									// For buys, we spend SOL (negative)
+									// For sells, we receive SOL (positive)
+									const change = tx.type === 'buy' ? -Math.abs(tx.price || 0) : Math.abs(tx.price || 0);
+									return sum + (change * LAMPORTS_PER_SOL);
+								}, 0);
 
-								const nftChange = nftTransactions.reduce((sum, tx) => sum + (tx.type === "buy" ? -tx.price : tx.price) * LAMPORTS_PER_SOL, 0);
+								const nftChange = nftTransactions.reduce((sum, tx) => {
+									// For buys, we spend SOL (negative)
+									// For sells, we receive SOL (positive)
+									const change = tx.type === 'buy' ? -Math.abs(tx.price) : Math.abs(tx.price);
+									return sum + (change * LAMPORTS_PER_SOL);
+								}, 0);
 
 								// Calculate total balance change including all transaction types
 								const totalBalanceChange = solBalanceChange + tokenChange + nftChange;
@@ -110,10 +120,11 @@ const TransactionAnalytics = () => {
 
 								if (balanceChangeInSol > 0) {
 									totalProfit += balanceChangeInSol;
-								} else {
+								} else if (balanceChangeInSol < 0) {
 									totalLoss += Math.abs(balanceChangeInSol);
 								}
 
+								// Add transaction to details log
 								transactionDetails.push({
 									signature: sig.signature,
 									timestamp: new Date(sig.blockTime ? sig.blockTime * 1000 : Date.now()),
