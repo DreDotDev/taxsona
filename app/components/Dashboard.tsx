@@ -11,13 +11,13 @@ const Dashboard = ({ data }: { data: AnalyticsData }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   return (
-    <div className="space-y-6">
-      <div className="flex space-x-4 overflow-x-auto pb-2">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-4 sm:overflow-x-auto pb-2">
         {['overview', 'wallets', 'tokens', 'nfts'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg font-mono text-sm transition-all ${
+            className={`flex-1 sm:flex-none min-w-[80px] px-3 sm:px-4 py-2 rounded-lg font-mono text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === tab
                 ? 'bg-gradient-to-r from-solana-purple to-solana-green text-white'
                 : 'bg-white/10 hover:bg-white/20'
@@ -28,7 +28,7 @@ const Dashboard = ({ data }: { data: AnalyticsData }) => {
         ))}
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-4 sm:gap-6 w-full overflow-x-hidden">
         {activeTab === 'overview' && <OverviewStats data={data} />}
         {activeTab === 'wallets' && <TopWallets wallets={data.topWallets} />}
         {activeTab === 'tokens' && <TokenActivity transactions={data.tokenTransactions} />}
