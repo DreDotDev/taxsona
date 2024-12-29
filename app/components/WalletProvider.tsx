@@ -1,21 +1,29 @@
 'use client';
 
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { ConnectionProvider, WalletProvider as SolanaWalletProvider } from '@solana/wallet-adapter-react';
-import { clusterApiUrl } from '@solana/web3.js';
+import { Connection, Commitment } from '@solana/web3.js';
 import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 
-// Dynamically import the WalletModalProvider to avoid SSR
 const WalletModalProvider = dynamic(
   () => import('@solana/wallet-adapter-react-ui').then(mod => mod.WalletModalProvider),
   { ssr: false }
 );
 
+const QUICKNODE_RPC = "https://rough-winter-putty.solana-mainnet.quiknode.pro/fb99ea7b4117dec92a034248b2282d22f75e2be3/";
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  const endpoint = useMemo(() => QUICKNODE_RPC, []);
+  
+  const connectionConfig = useMemo(() => ({
+    commitment: 'confirmed' as Commitment,
+    confirmTransactionInitialTimeout: 60000,
+    disableRetryOnRateLimit: false,
+    httpHeaders: {
+      'Content-Type': 'application/json',
+    }
+  }), []);
 
   const wallets = useMemo(
     () => [
@@ -26,10 +34,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
+    <ConnectionProvider endpoint={endpoint} config={connectionConfig}>
       <SolanaWalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </SolanaWalletProvider>
     </ConnectionProvider>
   );
-} 
+}

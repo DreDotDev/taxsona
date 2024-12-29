@@ -1,9 +1,10 @@
 'use client';
 
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { useState } from 'react';
 import { LAMPORTS_PER_SOL, ParsedTransactionWithMeta } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { getQuickNodeConnection, getTransactionHistory } from '../utils/quicknode';
 
 interface TransactionStats {
   totalProfit: number;
@@ -20,7 +21,7 @@ interface TokenTransaction {
 
 const TransactionAnalytics = () => {
   const { publicKey } = useWallet();
-  const { connection } = useConnection();
+  const connection = getQuickNodeConnection();
   const [stats, setStats] = useState<TransactionStats>({
     totalProfit: 0,
     totalLoss: 0,
@@ -30,13 +31,22 @@ const TransactionAnalytics = () => {
   const [hasTransactions, setHasTransactions] = useState<boolean | null>(null);
 
   const analyzeTransactions = async () => {
-    if (!publicKey) return;
+    if (!publicKey) {
+      console.log("No wallet connected");
+      return;
+    }
     
     setLoading(true);
+    console.log("Starting analysis for wallet:", publicKey.toBase58());
+
     try {
-      const signatures = await connection.getSignaturesForAddress(publicKey);
+      // Use QuickNode utility for transaction history
+      const signatures = await getTransactionHistory(publicKey.toBase58());
+      
+      console.log(`Found ${signatures.length} signatures using QuickNode`);
       
       if (signatures.length === 0) {
+        console.log("No signatures found");
         setHasTransactions(false);
         setLoading(false);
         return;
@@ -48,26 +58,60 @@ const TransactionAnalytics = () => {
       const tokenTransactions: TokenTransaction[] = [];
 
       for (const sig of signatures) {
+        console.log(`Processing transaction: ${sig.signature}`);
+        
         const tx = await connection.getParsedTransaction(sig.signature, {
-          maxSupportedTransactionVersion: 0
+          maxSupportedTransactionVersion: 0,
+          commitment: 'confirmed'
         }) as ParsedTransactionWithMeta | null;
 
-        if (!tx) continue;
+        if (!tx) {
+          console.log(`Failed to fetch transaction: ${sig.signature}`);
+          continue;
+        }
+
+        console.log(`Transaction type: ${tx.transaction.message.instructions[0]?.programId}`);
 
         // Track token transfers
         if (tx.meta && tx.transaction.message.instructions) {
-          const tokenTransfers = tx.meta.innerInstructions?.flatMap(ix => 
+          // Check main instructions
+          const mainInstructions = tx.transaction.message.instructions;
+          console.log(`Main instructions count: ${mainInstructions.length}`);
+
+          // Process main instructions
+          for (const ix of mainInstructions) {
+            if ('programId' in ix && ix.programId.equals(TOKEN_PROGRAM_ID)) {
+              console.log('Found token program instruction:', ix);
+              if ('parsed' in ix && ix.parsed.type === 'transfer') {
+                console.log('Found token transfer:', ix.parsed);
+              }
+            }
+          }
+
+          // Check inner instructions
+          const innerInstructions = tx.meta.innerInstructions || [];
+          console.log(`Inner instructions count: ${innerInstructions.length}`);
+
+          const tokenTransfers = innerInstructions.flatMap(ix => 
             ix.instructions.filter(instruction => 
               'programId' in instruction && 
               instruction.programId.equals(TOKEN_PROGRAM_ID)
             )
-          ) || [];
+          );
+
+          console.log(`Found ${tokenTransfers.length} token transfers`);
 
           for (const transfer of tokenTransfers) {
             if ('parsed' in transfer && transfer.parsed.type === 'transfer') {
-              const amount = transfer.parsed.info.amount / LAMPORTS_PER_SOL;
+              const amount = Number(transfer.parsed.info.amount) / LAMPORTS_PER_SOL;
               const isReceiving = transfer.parsed.info.destination === publicKey.toBase58();
               
+              console.log(`Token transfer:`, {
+                mint: transfer.parsed.info.mint,
+                amount,
+                type: isReceiving ? 'buy' : 'sell'
+              });
+
               tokenTransactions.push({
                 tokenAddress: transfer.parsed.info.mint,
                 amount: amount,
@@ -81,6 +125,8 @@ const TransactionAnalytics = () => {
         // Calculate SOL balance changes
         if (tx.meta?.postBalances && tx.meta?.preBalances) {
           const balanceChange = (tx.meta.postBalances[0] - tx.meta.preBalances[0]) / LAMPORTS_PER_SOL;
+          console.log(`SOL balance change: ${balanceChange}`);
+          
           if (balanceChange > 0) {
             totalProfit += balanceChange;
           } else {
@@ -89,8 +135,12 @@ const TransactionAnalytics = () => {
         }
       }
 
+      console.log(`Total token transactions found: ${tokenTransactions.length}`);
+
       // Calculate token profits/losses
       tokenTransactions.sort((a, b) => a.timestamp - b.timestamp);
+      console.log('Sorted token transactions:', tokenTransactions);
+
       for (let i = 0; i < tokenTransactions.length; i++) {
         const tx = tokenTransactions[i];
         if (tx.type === 'sell') {
@@ -101,6 +151,13 @@ const TransactionAnalytics = () => {
           
           if (buyTx) {
             const profit = tx.amount - buyTx.amount;
+            console.log(`Token profit/loss calculation:`, {
+              tokenAddress: tx.tokenAddress,
+              profit,
+              buyAmount: buyTx.amount,
+              sellAmount: tx.amount
+            });
+
             if (profit > 0) {
               totalProfit += profit;
             } else {
@@ -109,6 +166,12 @@ const TransactionAnalytics = () => {
           }
         }
       }
+
+      console.log('Final stats:', {
+        totalProfit,
+        totalLoss,
+        netBalance: totalProfit - totalLoss
+      });
 
       setStats({
         totalProfit,
