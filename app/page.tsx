@@ -17,22 +17,22 @@ const TransactionAnalytics = dynamic(
 export default function Home() {
   return (
     <WalletProvider>
-      <div className="min-h-screen px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen px-4 sm:px-6 lg:px-8 pb-8">
         <div className="max-w-7xl mx-auto py-8 sm:py-12 lg:py-16">
-          <div className="text-center space-y-4 sm:space-y-6">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-solana-purple via-solana-green to-solana-blue animate-gradient-xy px-4">
+          <div className="text-center space-y-4 sm:space-y-6 mb-8">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-solana-purple via-solana-green to-solana-blue animate-gradient-xy">
               TAXSONA
             </h1>
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto text-gray-300 font-mono">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl max-w-3xl mx-auto text-gray-300 font-mono">
               Connect your wallet and analyze your transaction history
             </p>
           </div>
 
-          <div className="mt-6 sm:mt-8 md:mt-10 flex justify-center">
+          <div className="flex justify-center mb-8">
             <WalletMultiButton />
           </div>
 
-          <div className="mt-6 sm:mt-8 md:mt-10">
+          <div className="w-full">
             <TransactionAnalytics />
           </div>
         </div>

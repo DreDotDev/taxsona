@@ -11,8 +11,8 @@ const Dashboard = ({ data }: { data: AnalyticsData }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-4 sm:overflow-x-auto pb-2">
+    <div className="space-y-4 sm:space-y-6 min-w-full">
+      <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-4 pb-2">
         {['overview', 'wallets', 'tokens', 'nfts'].map((tab) => (
           <button
             key={tab}
@@ -28,11 +28,19 @@ const Dashboard = ({ data }: { data: AnalyticsData }) => {
         ))}
       </div>
 
-      <div className="grid gap-4 sm:gap-6 w-full overflow-x-hidden">
-        {activeTab === 'overview' && <OverviewStats data={data} />}
-        {activeTab === 'wallets' && <TopWallets wallets={data.topWallets} />}
-        {activeTab === 'tokens' && <TokenActivity transactions={data.tokenTransactions} />}
-        {activeTab === 'nfts' && <NFTActivity transactions={data.nftTransactions} />}
+      <div className="min-w-full">
+        <div className={`${activeTab === 'overview' ? 'block' : 'hidden'}`}>
+          <OverviewStats data={data} />
+        </div>
+        <div className={`${activeTab === 'wallets' ? 'block' : 'hidden'}`}>
+          <TopWallets wallets={data.topWallets} />
+        </div>
+        <div className={`${activeTab === 'tokens' ? 'block' : 'hidden'}`}>
+          <TokenActivity transactions={data.tokenTransactions} />
+        </div>
+        <div className={`${activeTab === 'nfts' ? 'block' : 'hidden'}`}>
+          <NFTActivity transactions={data.nftTransactions} />
+        </div>
       </div>
     </div>
   );
