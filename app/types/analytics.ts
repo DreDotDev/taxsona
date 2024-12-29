@@ -13,12 +13,12 @@ export interface WalletInteraction {
 }
 
 export interface TokenTransaction {
-  tokenAddress: string;
-  tokenName?: string;
-  amount: number;
-  price?: number;
-  type: 'buy' | 'sell';
   timestamp: number;
+  tokenSymbol: string;
+  amount: number;
+  price: number; // Price in SOL
+  type: 'buy' | 'sell';
+  txHash: string;
 }
 
 export interface NFTTransaction {
@@ -39,7 +39,11 @@ export interface TransactionDetail {
 }
 
 export interface AnalyticsData {
-  stats: TransactionStats;
+  stats: {
+    netBalance: number;
+    totalVolume: number;
+    realizedPnL: number;
+  };
   topWallets: WalletInteraction[];
   tokenTransactions: TokenTransaction[];
   nftTransactions: NFTTransaction[];

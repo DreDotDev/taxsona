@@ -110,11 +110,12 @@ export const processTokenTransactions = async (tx: ParsedTransactionWithMeta, us
 			if (!tokenAccount.owner.equals(userWallet)) continue;
 
 			tokenTxs.push({
-				tokenAddress: tokenAccount.mint.toBase58(),
+				tokenSymbol: tokenAccount.mint.toBase58(),
 				amount: Math.abs(balanceChange),
 				type: balanceChange > 0 ? "buy" : "sell",
-				price: Math.abs(solChange), // Actual SOL amount involved
+				price: Math.abs(solChange),
 				timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
+				txHash: tx.transaction.signatures[0]
 			});
 		} catch (error) {
 			console.error("Error processing token transaction:", error);
@@ -187,4 +188,42 @@ export const calculateTotalVolume = (tokenTxs: TokenTransaction[], nftTxs: NFTTr
 
 	// Return total volume in lamports
 	return (tokenVolume + nftVolume) * LAMPORTS_PER_SOL;
+};
+
+export const calculateRealizedPnL = (transactions: TokenTransaction[]): number => {
+	let realizedPnL = 0;
+	const tokenPositions: Record<string, { totalCost: number; totalTokens: number }> = {};
+
+	// Sort transactions by timestamp to process them in chronological order
+	const sortedTransactions = [...transactions].sort((a, b) => a.timestamp - b.timestamp);
+
+	for (const tx of sortedTransactions) {
+		const { tokenSymbol, amount, price, type } = tx;
+		
+		if (!tokenPositions[tokenSymbol]) {
+			tokenPositions[tokenSymbol] = { totalCost: 0, totalTokens: 0 };
+		}
+
+		const position = tokenPositions[tokenSymbol];
+
+		if (type === 'buy') {
+			position.totalCost += amount * price;
+			position.totalTokens += amount;
+		} else if (type === 'sell') {
+			if (position.totalTokens > 0) {
+				// Calculate average cost basis
+				const avgCostPerToken = position.totalCost / position.totalTokens;
+				// Calculate realized PnL for this sale
+				const saleProceeds = amount * price;
+				const costBasis = amount * avgCostPerToken;
+				realizedPnL += saleProceeds - costBasis;
+				
+				// Update position
+				position.totalTokens -= amount;
+				position.totalCost = position.totalTokens * avgCostPerToken;
+			}
+		}
+	}
+
+	return realizedPnL * LAMPORTS_PER_SOL; // Convert to lamports
 };

@@ -3,8 +3,8 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 const OverviewStats = ({ data }: { data: AnalyticsData }) => {
   const totalVolumeSol = data.totalVolume / LAMPORTS_PER_SOL;
-  const profitLoss = (data.stats.netBalance / LAMPORTS_PER_SOL).toFixed(2);
-  const isProfit = data.stats.netBalance >= 0;
+  const profitLoss = (data.stats.realizedPnL / LAMPORTS_PER_SOL).toFixed(2);
+  const isProfit = data.stats.realizedPnL > 0;
   
   return (
     <div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -18,7 +18,7 @@ const OverviewStats = ({ data }: { data: AnalyticsData }) => {
         title="Net P&L"
         value={`${isProfit ? '+' : ''}${profitLoss} SOL`}
         icon="💰"
-        subtitle="Total profit/loss"
+        subtitle="Realized profit/loss from trades"
         valueClassName={isProfit ? 'text-green-400' : 'text-red-400'}
       />
       <StatCard

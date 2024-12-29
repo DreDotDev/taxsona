@@ -155,9 +155,9 @@ const TransactionAnalytics = () => {
 
 			setAnalyticsData({
 				stats: {
-					totalProfit,
-					totalLoss,
 					netBalance: totalProfit - totalLoss,
+					totalVolume,
+					realizedPnL: totalProfit - totalLoss
 				},
 				topWallets: Array.from(walletInteractions.values())
 					.sort((a, b) => b.totalSent - a.totalSent)
