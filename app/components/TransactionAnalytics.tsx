@@ -146,11 +146,10 @@ const TransactionAnalytics = () => {
 			}
 
 			const totalVolume = calculateTotalVolume(tokenTxs, nftTxs);
-			console.log("Analysis complete:", {
-				totalProfit,
-				totalLoss,
-				totalVolume,
-				uniqueWallets: walletInteractions.size
+			console.log("Volume breakdown:", {
+				tokenVolume: tokenTxs.reduce((sum, tx) => sum + (tx.price || 0), 0),
+				nftVolume: nftTxs.reduce((sum, tx) => sum + tx.price, 0),
+				totalVolume
 			});
 
 			setAnalyticsData({

@@ -104,44 +104,44 @@ export const processTokenTransactions = async (
   connection: Connection
 ): Promise<TokenTransaction[]> => {
   const tokenTxs: TokenTransaction[] = [];
-  
-  if (!tx.meta || !tx.meta.postTokenBalances || !tx.meta.preTokenBalances) return tokenTxs;
+  if (!tx.meta) return tokenTxs;
 
-  const userWalletIndex = tx.transaction.message.accountKeys.findIndex(
+  // Find the user's SOL balance change
+  const userIndex = tx.transaction.message.accountKeys.findIndex(
     account => account.pubkey.equals(userWallet)
   );
-  
-  // Calculate SOL price from user wallet balance change
-  const solChange = (tx.meta.postBalances[userWalletIndex] - tx.meta.preBalances[userWalletIndex]) / LAMPORTS_PER_SOL;
+  const solChange = userIndex >= 0 ? 
+    (tx.meta.postBalances[userIndex] - tx.meta.preBalances[userIndex]) / LAMPORTS_PER_SOL : 0;
 
-  for (const postBalance of tx.meta.postTokenBalances) {
-    const preBalance = tx.meta.preTokenBalances.find(
-      pre => pre.accountIndex === postBalance.accountIndex
-    );
-
-    if (!preBalance) continue;
-
-    const balanceChange = Number(postBalance.uiTokenAmount.amount) - Number(preBalance.uiTokenAmount.amount);
-    if (balanceChange === 0) continue;
-
+  // Process token balance changes
+  for (const postBalance of tx.meta.postTokenBalances || []) {
     try {
+      const preBalance = tx.meta.preTokenBalances?.find(
+        pre => pre.accountIndex === postBalance.accountIndex
+      );
+      
+      if (!preBalance) continue;
+
+      const balanceChange = 
+        Number(postBalance.uiTokenAmount.amount) - Number(preBalance.uiTokenAmount.amount);
+      
+      if (balanceChange === 0) continue;
+
       const tokenAccount = await getAccount(connection, tx.transaction.message.accountKeys[postBalance.accountIndex].pubkey);
       
-      // Only process if this token account belongs to the user
       if (!tokenAccount.owner.equals(userWallet)) continue;
 
       tokenTxs.push({
         tokenAddress: tokenAccount.mint.toBase58(),
         amount: Math.abs(balanceChange),
         type: balanceChange > 0 ? 'buy' : 'sell',
-        price: Math.abs(solChange), // Use actual SOL change
+        price: Math.abs(solChange), // Actual SOL amount involved
         timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now()
       });
     } catch (error) {
       console.error('Error processing token transaction:', error);
     }
   }
-
   return tokenTxs;
 };
 
@@ -209,7 +209,12 @@ export const calculateTotalVolume = (
   tokenTxs: TokenTransaction[], 
   nftTxs: NFTTransaction[]
 ): number => {
-  const tokenVolume = tokenTxs.reduce((sum, tx) => sum + (tx.price || 0), 0);
+  const tokenVolume = tokenTxs.reduce((sum, tx) => {
+    // Only count transactions with a valid price
+    return sum + (tx.price || 0);
+  }, 0);
+  
   const nftVolume = nftTxs.reduce((sum, tx) => sum + tx.price, 0);
+  
   return tokenVolume + nftVolume;
 };
