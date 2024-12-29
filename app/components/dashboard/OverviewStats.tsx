@@ -1,10 +1,7 @@
-import { useEffect, useState } from 'react';
 import { AnalyticsData } from '../../types/analytics';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { calculateTokenPnL } from '../../utils/transactionProcessing';
-import { getQuickNodeConnection } from '../../utils/quicknode';
 
-const OverviewStats = ({ data, walletAddress }: { data: AnalyticsData; walletAddress: string }) => {
+const OverviewStats = ({ data }: { data: AnalyticsData }) => {
   const profitLoss = data.stats.realizedPnL;
   const totalVolumeSol = data.totalVolume / LAMPORTS_PER_SOL;
   const isProfit = profitLoss > 0;

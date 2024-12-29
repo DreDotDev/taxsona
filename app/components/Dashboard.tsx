@@ -44,10 +44,7 @@ const Dashboard = ({ data }: { data: AnalyticsData }) => {
 
       <div className="space-y-6">
         <div className={`${activeTab === 'overview' ? 'block' : 'hidden'}`}>
-          <OverviewStats 
-            data={data} 
-            walletAddress={data.walletAddress} 
-          />
+          <OverviewStats data={data} />
         </div>
         <div className={`${activeTab === 'wallets' ? 'block' : 'hidden'}`}>
           <TopWallets wallets={data.topWallets} />
