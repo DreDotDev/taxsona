@@ -2,33 +2,47 @@
 
 import { useState } from 'react';
 import { AnalyticsData } from '../types/analytics';
-import TopWallets from '../components/dashboard/TopWallets';
-import TokenActivity from '../components/dashboard/TokenActivity';
-import NFTActivity from '../components/dashboard/NFTActivity';
-import OverviewStats from '../components/dashboard/OverviewStats';
+import TopWallets from './dashboard/TopWallets';
+import TokenActivity from './dashboard/TokenActivity';
+import NFTActivity from './dashboard/NFTActivity';
+import OverviewStats from './dashboard/OverviewStats';
+import TransactionLog from './dashboard/TransactionLog';
 
 const Dashboard = ({ data }: { data: AnalyticsData }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'wallets', label: 'Wallets', icon: '👥' },
+    { id: 'tokens', label: 'Tokens', icon: '🔄' },
+    { id: 'nfts', label: 'NFTs', icon: '🖼️' },
+    { id: 'transactions', label: 'Transactions', icon: '📝' }
+  ];
+
   return (
-    <div className="space-y-4 sm:space-y-6 min-w-full">
-      <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-4 pb-2">
-        {['overview', 'wallets', 'tokens', 'nfts'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 sm:flex-none min-w-[80px] px-3 sm:px-4 py-2 rounded-lg font-mono text-xs sm:text-sm transition-all whitespace-nowrap ${
-              activeTab === tab
-                ? 'bg-gradient-to-r from-solana-purple to-solana-green text-white'
-                : 'bg-white/10 hover:bg-white/20'
-            }`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
+    <div className="space-y-6">
+      <div className="flex overflow-x-auto scrollbar-hide">
+        <div className="flex space-x-2 p-1 bg-black/20 backdrop-blur-xl rounded-lg border border-solana-purple/20">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                px-4 py-2 rounded-lg font-mono text-sm whitespace-nowrap transition-all
+                ${activeTab === tab.id 
+                  ? 'bg-gradient-to-r from-solana-purple to-solana-green text-white shadow-lg' 
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }
+              `}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="min-w-full">
+      <div className="space-y-6">
         <div className={`${activeTab === 'overview' ? 'block' : 'hidden'}`}>
           <OverviewStats data={data} />
         </div>
@@ -40,6 +54,9 @@ const Dashboard = ({ data }: { data: AnalyticsData }) => {
         </div>
         <div className={`${activeTab === 'nfts' ? 'block' : 'hidden'}`}>
           <NFTActivity transactions={data.nftTransactions} />
+        </div>
+        <div className={`${activeTab === 'transactions' ? 'block' : 'hidden'}`}>
+          <TransactionLog transactions={data.transactionLog} />
         </div>
       </div>
     </div>

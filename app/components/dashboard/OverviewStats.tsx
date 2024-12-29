@@ -3,6 +3,8 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 const OverviewStats = ({ data }: { data: AnalyticsData }) => {
   const totalVolumeSol = data.totalVolume / LAMPORTS_PER_SOL;
+  const profitLoss = (data.stats.netBalance / LAMPORTS_PER_SOL).toFixed(2);
+  const isProfit = data.stats.netBalance >= 0;
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -10,36 +12,53 @@ const OverviewStats = ({ data }: { data: AnalyticsData }) => {
         title="Total Volume"
         value={`${totalVolumeSol.toFixed(2)} SOL`}
         icon="📊"
+        subtitle="All-time trading volume"
+      />
+      <StatCard
+        title="Net P&L"
+        value={`${isProfit ? '+' : ''}${profitLoss} SOL`}
+        icon="💰"
+        subtitle="Total profit/loss"
+        valueClassName={isProfit ? 'text-green-400' : 'text-red-400'}
       />
       <StatCard
         title="Unique Wallets"
         value={data.uniqueWallets.toString()}
         icon="👥"
+        subtitle="Distinct addresses"
       />
       <StatCard
-        title="Token Transactions"
-        value={data.tokenTransactions.length.toString()}
+        title="Total Transactions"
+        value={(data.tokenTransactions.length + data.nftTransactions.length).toString()}
         icon="🔄"
-      />
-      <StatCard
-        title="NFT Transactions"
-        value={data.nftTransactions.length.toString()}
-        icon="🖼️"
+        subtitle="Combined token & NFT trades"
       />
     </div>
   );
 };
 
-const StatCard = ({ title, value, icon }: { title: string; value: string; icon: string }) => (
-  <div className="backdrop-blur-xl bg-white/5 p-4 rounded-lg border border-white/10">
-    <div className="flex items-center justify-between">
+const StatCard = ({ 
+  title, 
+  value, 
+  icon, 
+  subtitle,
+  valueClassName = 'bg-gradient-to-r from-solana-purple to-solana-green bg-clip-text text-transparent'
+}: { 
+  title: string; 
+  value: string; 
+  icon: string;
+  subtitle: string;
+  valueClassName?: string;
+}) => (
+  <div className="backdrop-blur-xl bg-black/30 p-6 rounded-xl border border-solana-purple/20 hover:border-solana-purple/40 transition-all">
+    <div className="flex items-center justify-between mb-2">
       <span className="text-2xl">{icon}</span>
-      <span className="text-xs text-gray-400">Last 24h</span>
+      <h3 className="text-sm font-mono text-gray-400">{title}</h3>
     </div>
-    <p className="mt-2 text-2xl font-bold font-mono bg-gradient-to-r from-solana-purple to-solana-green bg-clip-text text-transparent">
+    <p className={`mt-2 text-2xl font-bold font-mono ${valueClassName}`}>
       {value}
     </p>
-    <p className="text-sm text-gray-400">{title}</p>
+    <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
   </div>
 );
 
