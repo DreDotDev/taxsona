@@ -12,11 +12,21 @@ import {
 import { WalletInteraction, TokenTransaction, NFTTransaction } from '../types/analytics';
 import { Metaplex } from "@metaplex-foundation/js";
 
+// Define a union type for both browser and node crypto implementations
+type CryptoImplementation = Crypto | typeof window.crypto;
+
+// Define type for global crypto
+declare global {
+  interface Global {
+    crypto: CryptoImplementation;
+  }
+}
+
 // Use dynamic import for node:crypto
 const getCrypto = async () => {
   if (typeof window === "undefined") {
     const nodeCrypto = await import('node:crypto');
-    return nodeCrypto.webcrypto;
+    return nodeCrypto.webcrypto as CryptoImplementation;
   }
   return window.crypto;
 };
@@ -25,7 +35,7 @@ const getCrypto = async () => {
 (async () => {
   if (typeof window === "undefined") {
     const cryptoImpl = await getCrypto();
-    (global as any).crypto = cryptoImpl;
+    (global as { crypto: CryptoImplementation }).crypto = cryptoImpl;
   }
 })();
 
@@ -39,8 +49,7 @@ export const NFT_PROGRAM_IDS = [
 export const processWalletInteractions = async (
   tx: ParsedTransactionWithMeta,
   userWallet: PublicKey,
-  interactions: Map<string, WalletInteraction>,
-  _connection: Connection
+  interactions: Map<string, WalletInteraction>
 ) => {
   if (!tx.meta?.postBalances || !tx.meta?.preBalances) return;
 

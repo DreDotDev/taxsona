@@ -95,7 +95,7 @@ const TransactionAnalytics = () => {
 							if (!tx || !tx.meta) return;
 
 							// Process wallet interactions
-							await processWalletInteractions(tx, publicKey, walletInteractions, connection);
+							await processWalletInteractions(tx, publicKey, walletInteractions);
 
 							// Process token transactions
 							const tokenTransactions = await processTokenTransactions(tx, publicKey, connection);
