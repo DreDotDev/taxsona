@@ -60,11 +60,7 @@ const TransactionAnalytics = () => {
 
 	const analyzeTransactions = async () => {
 		if (!publicKey || !connection) {
-			console.error("No wallet connected:", { 
-				walletConnected: !!connected,
-				hasPublicKey: !!publicKey,
-				hasConnection: !!connection 
-			});
+			console.error("No wallet connected or connection not established");
 			return;
 		}
 
@@ -72,10 +68,6 @@ const TransactionAnalytics = () => {
 		try {
 			console.log("Starting analysis for wallet:", publicKey.toBase58());
 			
-			// Verify connection is still active
-			const version = await connection.getVersion();
-			console.log("Connection verified:", version);
-
 			const signatures = await connection.getSignaturesForAddress(publicKey, {
 				limit: 1000,
 			});
@@ -89,9 +81,10 @@ const TransactionAnalytics = () => {
 			let totalLoss = 0;
 			const transactionDetails: TransactionDetail[] = [];
 
-			// Process transactions in batches of 10 to avoid rate limiting
-			for (let i = 0; i < signatures.length; i += 10) {
-				const batch = signatures.slice(i, i + 10);
+			// Process transactions in smaller batches
+			for (let i = 0; i < signatures.length; i += 5) {
+				const batch = signatures.slice(i, i + 5);
+				
 				await Promise.all(
 					batch.map(async (sig) => {
 						try {
@@ -99,21 +92,32 @@ const TransactionAnalytics = () => {
 								maxSupportedTransactionVersion: 0,
 							});
 
-							if (!tx?.meta) return;
+							if (!tx || !tx.meta) return;
 
-							processWalletInteractions(tx, publicKey, walletInteractions);
-							processTokenTransactions(tx, publicKey, tokenTxs);
-							processNFTTransactions(tx, publicKey, nftTxs);
+							// Process wallet interactions
+							await processWalletInteractions(tx, publicKey, walletInteractions, connection);
 
-							const index = tx.transaction.message.accountKeys.findIndex(
+							// Process token transactions
+							const tokenTransactions = await processTokenTransactions(tx, publicKey, connection);
+							tokenTxs.push(...tokenTransactions);
+
+							// Process NFT transactions
+							const nftTransactions = await processNFTTransactions(tx, publicKey, connection);
+							nftTxs.push(...nftTransactions);
+
+							// Calculate balance changes
+							const accountIndex = tx.transaction.message.accountKeys.findIndex(
 								(key) => key.pubkey.equals(publicKey)
 							);
 
-							if (index !== -1 && tx.meta.postBalances && tx.meta.preBalances) {
-								const balanceChange = (tx.meta.postBalances[index] - tx.meta.preBalances[index]) / LAMPORTS_PER_SOL;
+							if (accountIndex >= 0) {
+								const balanceChange = 
+									(tx.meta.postBalances[accountIndex] - tx.meta.preBalances[accountIndex]) / 
+									LAMPORTS_PER_SOL;
+
 								if (balanceChange > 0) {
 									totalProfit += balanceChange;
-								} else if (balanceChange < 0) {
+								} else {
 									totalLoss += Math.abs(balanceChange);
 								}
 
@@ -121,7 +125,7 @@ const TransactionAnalytics = () => {
 									signature: sig.signature,
 									timestamp: new Date(sig.blockTime ? sig.blockTime * 1000 : Date.now()),
 									balanceChange,
-									postBalance: tx.meta.postBalances[index] / LAMPORTS_PER_SOL,
+									postBalance: tx.meta.postBalances[accountIndex] / LAMPORTS_PER_SOL,
 									type: determineTransactionType(tx)
 								});
 							}
@@ -134,8 +138,6 @@ const TransactionAnalytics = () => {
 				// Add a small delay between batches to avoid rate limiting
 				await new Promise(resolve => setTimeout(resolve, 100));
 			}
-
-			console.log("Processed transactions:", transactionDetails.length);
 
 			setAnalyticsData({
 				stats: {
@@ -150,7 +152,7 @@ const TransactionAnalytics = () => {
 				nftTransactions: nftTxs,
 				totalVolume: calculateTotalVolume(tokenTxs, nftTxs),
 				uniqueWallets: walletInteractions.size,
-				transactionLog: transactionDetails
+				transactionLog: transactionDetails.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 			});
 		} catch (error) {
 			console.error("Analysis failed:", error);

@@ -23,7 +23,7 @@ export interface TokenTransaction {
 
 export interface NFTTransaction {
   mint: string;
-  collectionName?: string;
+  collectionName: string;
   price: number;
   type: 'buy' | 'sell';
   timestamp: number;
