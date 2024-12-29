@@ -1,7 +1,7 @@
 'use client';
 
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LAMPORTS_PER_SOL, ParsedTransactionWithMeta } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { getQuickNodeConnection, getTransactionHistory } from '../utils/quicknode';
@@ -20,7 +20,7 @@ interface TokenTransaction {
 }
 
 const TransactionAnalytics = () => {
-  const { publicKey } = useWallet();
+  const { publicKey, connected } = useWallet();
   const connection = getQuickNodeConnection();
   const [stats, setStats] = useState<TransactionStats>({
     totalProfit: 0,
@@ -30,23 +30,38 @@ const TransactionAnalytics = () => {
   const [loading, setLoading] = useState(false);
   const [hasTransactions, setHasTransactions] = useState<boolean | null>(null);
 
+  useEffect(() => {
+    console.log('Wallet connection status:', {
+      connected,
+      walletAddress: publicKey?.toBase58() || 'Not connected'
+    });
+  }, [connected, publicKey]);
+
   const analyzeTransactions = async () => {
     if (!publicKey) {
-      console.log("No wallet connected");
+      console.error("No wallet connected - aborting analysis");
       return;
     }
     
+    const walletAddress = publicKey.toBase58();
+    console.group(`Starting analysis for wallet: ${walletAddress}`);
+    console.log('Using QuickNode RPC:', connection.rpcEndpoint);
+    
     setLoading(true);
-    console.log("Starting analysis for wallet:", publicKey.toBase58());
 
     try {
-      // Use QuickNode utility for transaction history
-      const signatures = await getTransactionHistory(publicKey.toBase58());
+      console.time('Transaction fetch');
+      const signatures = await getTransactionHistory(walletAddress);
+      console.timeEnd('Transaction fetch');
       
-      console.log(`Found ${signatures.length} signatures using QuickNode`);
+      console.log({
+        message: 'Fetched signatures',
+        count: signatures.length,
+        firstFew: signatures.slice(0, 3).map(sig => sig.signature),
+      });
       
       if (signatures.length === 0) {
-        console.log("No signatures found");
+        console.warn("No signatures found for wallet");
         setHasTransactions(false);
         setLoading(false);
         return;
@@ -178,10 +193,44 @@ const TransactionAnalytics = () => {
         totalLoss,
         netBalance: totalProfit - totalLoss,
       });
+
+      // Enhanced logging for token transfers
+      console.group('Token Transfer Analysis');
+      console.log(`Processing ${tokenTransactions.length} token transactions`);
+      tokenTransactions.forEach((tx, index) => {
+        console.log(`[${index + 1}/${tokenTransactions.length}]`, {
+          type: tx.type,
+          token: tx.tokenAddress,
+          amount: tx.amount,
+          timestamp: new Date(tx.timestamp * 1000).toISOString()
+        });
+      });
+      console.groupEnd();
+
+      // Enhanced logging for final calculations
+      console.group('Final Calculations');
+      console.log({
+        totalTransactionsProcessed: signatures.length,
+        tokenTransactionsFound: tokenTransactions.length,
+        finalStats: {
+          totalProfit,
+          totalLoss,
+          netBalance: totalProfit - totalLoss
+        }
+      });
+      console.groupEnd();
+
     } catch (error) {
-      console.error('Error analyzing transactions:', error);
+      console.error('Analysis failed:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack
+        });
+      }
     } finally {
       setLoading(false);
+      console.groupEnd(); // Close main analysis group
     }
   };
 

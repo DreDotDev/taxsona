@@ -1,7 +1,7 @@
 'use client';
 
 import { ConnectionProvider, WalletProvider as SolanaWalletProvider } from '@solana/wallet-adapter-react';
-import { Connection, Commitment } from '@solana/web3.js';
+import { Commitment } from '@solana/web3.js';
 import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
