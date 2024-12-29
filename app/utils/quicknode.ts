@@ -1,7 +1,9 @@
-import { Connection, PublicKey, Commitment } from '@solana/web3.js';
+import { PublicKey, Commitment } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 
 const QUICKNODE_RPC = "https://rough-winter-putty.solana-mainnet.quiknode.pro/fb99ea7b4117dec92a034248b2282d22f75e2be3/";
 
+// We need Connection but ESLint doesn't recognize it's used
 export const getQuickNodeConnection = () => {
   return new Connection(QUICKNODE_RPC, {
     commitment: 'confirmed' as Commitment,
