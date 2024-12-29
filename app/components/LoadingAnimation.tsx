@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react';
 
-const LoadingAnimation = () => {
+interface LoadingAnimationProps {
+  progress: number;
+}
+
+const LoadingAnimation = ({ progress }: LoadingAnimationProps) => {
   const [mounted, setMounted] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [loadingText, setLoadingText] = useState('Scanning the blockchain');
 
-  // Only start animations after component is mounted on client
   useEffect(() => {
     setMounted(true);
     
-    const progressInterval = setInterval(() => {
-      setProgress(prev => (prev < 100 ? prev + 1 : 0));
-    }, 50);
-
     const textInterval = setInterval(() => {
       setLoadingText(prev => {
         const texts = [
@@ -28,7 +26,6 @@ const LoadingAnimation = () => {
     }, 2000);
 
     return () => {
-      clearInterval(progressInterval);
       clearInterval(textInterval);
     };
   }, []);
@@ -65,7 +62,7 @@ const LoadingAnimation = () => {
           />
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-sm font-mono text-solana-green">
-              {progress}%
+              {Math.round(progress)}%
             </span>
           </div>
         </div>

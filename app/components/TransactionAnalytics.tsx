@@ -37,6 +37,7 @@ const TransactionAnalytics = () => {
 	const { publicKey, connected } = useWallet();
 	const { connection } = useConnection();
 	const [loading, setLoading] = useState(false);
+	const [progress, setProgress] = useState(0);
 	const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
 	// Monitor wallet connection status
@@ -66,6 +67,7 @@ const TransactionAnalytics = () => {
 		}
 
 		setLoading(true);
+		setProgress(0);
 		try {
 			console.log("Starting analysis for wallet:", publicKey.toBase58());
 			
@@ -81,6 +83,10 @@ const TransactionAnalytics = () => {
 			let totalProfit = 0;
 			let totalLoss = 0;
 			const transactionDetails: TransactionDetail[] = [];
+
+			// Calculate progress increment per transaction
+			const progressIncrement = 100 / signatures.length;
+			let processedCount = 0;
 
 			// Process transactions in smaller batches
 			for (let i = 0; i < signatures.length; i += 5) {
@@ -130,6 +136,10 @@ const TransactionAnalytics = () => {
 									type: determineTransactionType(tx)
 								});
 							}
+
+							// Update progress after each transaction
+							processedCount++;
+							setProgress((processedCount * progressIncrement));
 						} catch (txError) {
 							console.error("Error processing transaction:", sig.signature, txError);
 						}
@@ -172,7 +182,7 @@ const TransactionAnalytics = () => {
 				{loading ? "Analyzing..." : "Analyze Transactions"}
 			</button>
 			
-			{loading && <LoadingAnimation />}
+			{loading && <LoadingAnimation progress={progress} />}
 
 			{!loading && analyticsData && (
 				<div className="w-full overflow-x-auto">
