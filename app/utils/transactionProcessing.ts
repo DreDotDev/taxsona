@@ -1,7 +1,8 @@
 import { 
   ParsedTransactionWithMeta, 
   PublicKey, 
-  LAMPORTS_PER_SOL 
+  LAMPORTS_PER_SOL,
+  Connection 
 } from '@solana/web3.js';
 import { 
   TOKEN_PROGRAM_ID,
@@ -39,7 +40,7 @@ export const processWalletInteractions = async (
   tx: ParsedTransactionWithMeta,
   userWallet: PublicKey,
   interactions: Map<string, WalletInteraction>,
-  connection: any
+  _connection: Connection
 ) => {
   if (!tx.meta?.postBalances || !tx.meta?.preBalances) return;
 
@@ -78,7 +79,7 @@ export const processWalletInteractions = async (
 export const processTokenTransactions = async (
   tx: ParsedTransactionWithMeta,
   userWallet: PublicKey,
-  connection: any
+  connection: Connection
 ): Promise<TokenTransaction[]> => {
   const tokenTxs: TokenTransaction[] = [];
   
@@ -127,7 +128,7 @@ export const processTokenTransactions = async (
 export const processNFTTransactions = async (
   tx: ParsedTransactionWithMeta,
   userWallet: PublicKey,
-  connection: any
+  connection: Connection
 ): Promise<NFTTransaction[]> => {
   const nftTxs: NFTTransaction[] = [];
   
@@ -180,4 +181,4 @@ export const calculateTotalVolume = (
   const tokenVolume = tokenTxs.reduce((sum, tx) => sum + (tx.price || 0), 0);
   const nftVolume = nftTxs.reduce((sum, tx) => sum + tx.price, 0);
   return tokenVolume + nftVolume;
-}; 
+};
