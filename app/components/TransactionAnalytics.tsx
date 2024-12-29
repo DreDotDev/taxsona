@@ -4,9 +4,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useState } from "react";
 import { 
 	LAMPORTS_PER_SOL, 
-	ParsedTransactionWithMeta, 
-	PartiallyDecodedInstruction, 
-	PublicKey 
+	ParsedTransactionWithMeta,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { getQuickNodeConnection, getTransactionHistory } from "../utils/quicknode";
@@ -26,13 +24,6 @@ import {
 	NFT_PROGRAM_IDS 
 } from "../utils/transactionProcessing";
 
-interface ParsedInstruction extends PartiallyDecodedInstruction {
-	programId: PublicKey;
-	parsed?: {
-		type: string;
-	};
-}
-
 const determineTransactionType = (tx: ParsedTransactionWithMeta): string => {
 	const programs = tx.transaction.message.instructions.map((ix) => 
 		'programId' in ix ? ix.programId.toString() : ''
@@ -48,15 +39,27 @@ const TransactionAnalytics = () => {
 	const [loading, setLoading] = useState(false);
 	const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
-  
-
 	const analyzeTransactions = async () => {
-		if (!publicKey) return;
+		if (!publicKey) {
+			console.error("No wallet connected");
+			return;
+		}
+
+		console.log("Analyzing transactions for wallet:", publicKey.toBase58());
+		
+		// Verify connection
+		try {
+			const version = await connection.getVersion();
+			console.log("Connected to Quicknode:", version);
+		} catch (error) {
+			console.error("Failed to connect to Quicknode:", error);
+			return;
+		}
 
 		setLoading(true);
 		try {
 			const signatures = await getTransactionHistory(publicKey.toBase58());
-			console.log("Fetched signatures:", signatures.length); // Debug log
+			console.log("Fetched signatures:", signatures.length);
 
 			const walletInteractions = new Map<string, WalletInteraction>();
 			const tokenTxs: TokenTransaction[] = [];
