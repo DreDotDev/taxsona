@@ -50,11 +50,46 @@ const TransactionAnalytics = () => {
 		try {
 			console.log("Starting analysis for wallet:", publicKey.toBase58());
 
-			const signatures = await connection.getSignaturesForAddress(publicKey, {
-				limit: 1000,
-			});
+			let allSignatures: any[] = [];
+			let lastSignature = null;
+			const oneYearAgo = new Date();
+			oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-			console.log("Fetched signatures:", signatures.length);
+			// Keep fetching until we either:
+			// 1. Get transactions older than a year
+			// 2. Run out of transactions to fetch
+			while (true) {
+				const options: any = {
+					limit: 1000,
+				};
+				
+				if (lastSignature) {
+					options.before = lastSignature;
+				}
+
+				const signatures = await connection.getSignaturesForAddress(publicKey, options);
+				
+				if (signatures.length === 0) break;
+
+				// Check if we've reached transactions older than a year
+				const oldestTxTime = signatures[signatures.length - 1].blockTime;
+				if (oldestTxTime && oldestTxTime * 1000 < oneYearAgo.getTime()) {
+					// Filter out transactions older than a year
+					const recentSignatures = signatures.filter(sig => 
+						sig.blockTime && sig.blockTime * 1000 >= oneYearAgo.getTime()
+					);
+					allSignatures.push(...recentSignatures);
+					break;
+				}
+
+				allSignatures.push(...signatures);
+				lastSignature = signatures[signatures.length - 1].signature;
+
+				// Add a small delay to avoid rate limiting
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			console.log("Fetched total signatures:", allSignatures.length);
 
 			const walletInteractions = new Map<string, WalletInteraction>();
 			const tokenTxs: TokenTransaction[] = [];
@@ -63,12 +98,12 @@ const TransactionAnalytics = () => {
 			let totalProfit = 0;
 			let totalLoss = 0;
 
-			const progressIncrement = 100 / signatures.length;
+			const progressIncrement = 100 / allSignatures.length;
 			let processedCount = 0;
 
 			// Process transactions in batches of 5
-			for (let i = 0; i < signatures.length; i += 5) {
-				const batch = signatures.slice(i, i + 5);
+			for (let i = 0; i < allSignatures.length; i += 5) {
+				const batch = allSignatures.slice(i, i + 5);
 
 				await Promise.all(
 					batch.map(async (sig) => {
