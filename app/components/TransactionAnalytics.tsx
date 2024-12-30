@@ -2,7 +2,7 @@
 
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useState, useEffect } from "react";
-import { LAMPORTS_PER_SOL, ParsedTransactionWithMeta } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, ParsedTransactionWithMeta, ConfirmedSignatureInfo, SignaturesForAddressOptions } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { AnalyticsData, WalletInteraction, TokenTransaction, NFTTransaction, TransactionDetail } from "../types/analytics";
 import Dashboard from "./Dashboard";
@@ -50,8 +50,8 @@ const TransactionAnalytics = () => {
 		try {
 			console.log("Starting analysis for wallet:", publicKey.toBase58());
 
-			let allSignatures: any[] = [];
-			let lastSignature = null;
+			const allSignatures: ConfirmedSignatureInfo[] = [];
+			let lastSignature: string | null = null;
 			const oneYearAgo = new Date();
 			oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
@@ -59,13 +59,10 @@ const TransactionAnalytics = () => {
 			// 1. Get transactions older than a year
 			// 2. Run out of transactions to fetch
 			while (true) {
-				const options: any = {
+				const options: SignaturesForAddressOptions = {
 					limit: 1000,
+					before: lastSignature || undefined
 				};
-				
-				if (lastSignature) {
-					options.before = lastSignature;
-				}
 
 				const signatures = await connection.getSignaturesForAddress(publicKey, options);
 				
