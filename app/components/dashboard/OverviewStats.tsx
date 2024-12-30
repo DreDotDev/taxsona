@@ -13,34 +13,73 @@ interface TransactionSummary {
 const OverviewStats = ({ data }: { data: AnalyticsData }) => {
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   
-  const profitLoss = data.stats.realizedPnL;
   const totalVolumeSol = data.totalVolume / LAMPORTS_PER_SOL;
-  const isProfit = profitLoss > 0;
-
-  // Convert TransactionDetail to TransactionSummary
+  
+  // Separate transactions by type
   const transactionSummaries: Record<string, TransactionSummary[]> = {
-    profit: [],
-    loss: []
+    tokenProfit: [],
+    tokenLoss: [],
+    solSent: [],
+    solReceived: [],
+    gasFees: []
   };
 
-  data.transactionLog.forEach(tx => {
-    const summary: TransactionSummary = {
-      signature: tx.signature,
-      timestamp: tx.timestamp,
-      invested: tx.balanceChange < 0 ? Math.abs(tx.balanceChange) : 0,
-      result: tx.balanceChange > 0 ? tx.balanceChange : tx.balanceChange,
-      type: tx.type || 'Unknown'
-    };
+  let totalTokenProfit = 0;
+  let totalTokenLoss = 0;
+  let totalSolSent = 0;
+  let totalSolReceived = 0;
+  let totalGasFees = 0;
 
-    if (tx.balanceChange > 0) {
-      transactionSummaries.profit.push(summary);
-    } else if (tx.balanceChange < 0) {
-      transactionSummaries.loss.push(summary);
+  data.transactionLog.forEach(tx => {
+    if (tx.type === 'Token Transfer') {
+      const summary: TransactionSummary = {
+        signature: tx.signature,
+        timestamp: tx.timestamp,
+        invested: tx.balanceChange < 0 ? Math.abs(tx.balanceChange) : 0,
+        result: tx.balanceChange > 0 ? tx.balanceChange : Math.abs(tx.balanceChange),
+        type: tx.type
+      };
+
+      if (tx.balanceChange > 0) {
+        transactionSummaries.tokenProfit.push(summary);
+        totalTokenProfit += tx.balanceChange;
+      } else if (tx.balanceChange < 0) {
+        transactionSummaries.tokenLoss.push(summary);
+        totalTokenLoss += Math.abs(tx.balanceChange);
+      }
+    } else if (tx.type === 'SOL Transfer') {
+      const summary: TransactionSummary = {
+        signature: tx.signature,
+        timestamp: tx.timestamp,
+        invested: 0,
+        result: Math.abs(tx.balanceChange),
+        type: tx.type
+      };
+
+      if (tx.balanceChange > 0) {
+        transactionSummaries.solReceived.push(summary);
+        totalSolReceived += tx.balanceChange;
+      } else if (tx.balanceChange < 0) {
+        transactionSummaries.solSent.push(summary);
+        totalSolSent += Math.abs(tx.balanceChange);
+      }
+    }
+
+    // Calculate gas fees (small negative balance changes)
+    if (tx.balanceChange < 0 && Math.abs(tx.balanceChange) < 0.01) {
+      transactionSummaries.gasFees.push({
+        signature: tx.signature,
+        timestamp: tx.timestamp,
+        invested: 0,
+        result: Math.abs(tx.balanceChange),
+        type: 'Gas Fee'
+      });
+      totalGasFees += Math.abs(tx.balanceChange);
     }
   });
 
   return (
-    <div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <StatCard
         title="Total Volume"
         value={`${totalVolumeSol.toFixed(2)} SOL`}
@@ -48,37 +87,54 @@ const OverviewStats = ({ data }: { data: AnalyticsData }) => {
         subtitle="All-time trading volume"
       />
       <ExpandableStatCard
-        title="Total Profit"
-        value={`+${(data.stats.totalProfit || 0).toFixed(2)} SOL`}
+        title="Token Profit"
+        value={`+${totalTokenProfit.toFixed(4)} SOL`}
         icon="📈"
-        subtitle={`${transactionSummaries.profit.length} profitable trades`}
+        subtitle={`${transactionSummaries.tokenProfit.length} profitable token trades`}
         valueClassName="text-green-400"
-        isExpanded={expandedCard === 'profit'}
-        onToggle={() => setExpandedCard(expandedCard === 'profit' ? null : 'profit')}
-        transactions={transactionSummaries.profit}
+        isExpanded={expandedCard === 'tokenProfit'}
+        onToggle={() => setExpandedCard(expandedCard === 'tokenProfit' ? null : 'tokenProfit')}
+        transactions={transactionSummaries.tokenProfit}
       />
       <ExpandableStatCard
-        title="Total Loss"
-        value={`-${(data.stats.totalLoss || 0).toFixed(2)} SOL`}
+        title="Token Loss"
+        value={`-${totalTokenLoss.toFixed(4)} SOL`}
         icon="📉"
-        subtitle={`${transactionSummaries.loss.length} unprofitable trades`}
+        subtitle={`${transactionSummaries.tokenLoss.length} unprofitable token trades`}
         valueClassName="text-red-400"
-        isExpanded={expandedCard === 'loss'}
-        onToggle={() => setExpandedCard(expandedCard === 'loss' ? null : 'loss')}
-        transactions={transactionSummaries.loss}
+        isExpanded={expandedCard === 'tokenLoss'}
+        onToggle={() => setExpandedCard(expandedCard === 'tokenLoss' ? null : 'tokenLoss')}
+        transactions={transactionSummaries.tokenLoss}
       />
-      <StatCard
-        title="Net P&L"
-        value={`${isProfit ? '+' : ''}${profitLoss.toFixed(2)} SOL`}
-        icon="💰"
-        subtitle="Overall profit/loss"
-        valueClassName={isProfit ? 'text-green-400' : 'text-red-400'}
+      <ExpandableStatCard
+        title="SOL Sent"
+        value={`${totalSolSent.toFixed(4)} SOL`}
+        icon="↗️"
+        subtitle={`${transactionSummaries.solSent.length} outgoing transfers`}
+        valueClassName="text-orange-400"
+        isExpanded={expandedCard === 'solSent'}
+        onToggle={() => setExpandedCard(expandedCard === 'solSent' ? null : 'solSent')}
+        transactions={transactionSummaries.solSent}
       />
-      <StatCard
-        title="Total Transactions"
-        value={(data.tokenTransactions.length + data.nftTransactions.length).toString()}
-        icon="🔄"
-        subtitle="Combined token & NFT trades"
+      <ExpandableStatCard
+        title="SOL Received"
+        value={`${totalSolReceived.toFixed(4)} SOL`}
+        icon="↙️"
+        subtitle={`${transactionSummaries.solReceived.length} incoming transfers`}
+        valueClassName="text-blue-400"
+        isExpanded={expandedCard === 'solReceived'}
+        onToggle={() => setExpandedCard(expandedCard === 'solReceived' ? null : 'solReceived')}
+        transactions={transactionSummaries.solReceived}
+      />
+      <ExpandableStatCard
+        title="Gas Fees"
+        value={`${totalGasFees.toFixed(4)} SOL`}
+        icon="⛽"
+        subtitle={`${transactionSummaries.gasFees.length} transactions`}
+        valueClassName="text-gray-400"
+        isExpanded={expandedCard === 'gasFees'}
+        onToggle={() => setExpandedCard(expandedCard === 'gasFees' ? null : 'gasFees')}
+        transactions={transactionSummaries.gasFees}
       />
     </div>
   );

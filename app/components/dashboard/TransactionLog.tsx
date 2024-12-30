@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { TransactionDetail } from '../../types/analytics';
 
 const TransactionLog = ({ transactions }: { transactions: TransactionDetail[] }) => {
@@ -56,10 +55,10 @@ const TransactionLog = ({ transactions }: { transactions: TransactionDetail[] })
                       : 'text-gray-400'
                 }`}>
                   {tx.balanceChange > 0 ? '+' : ''}
-                  {(tx.balanceChange / LAMPORTS_PER_SOL).toFixed(4)} SOL
+                  {tx.balanceChange.toFixed(4)} SOL
                 </p>
                 <p className="text-xs text-gray-500">
-                  Balance: {(tx.postBalance).toFixed(4)} SOL
+                  Balance: {tx.postBalance.toFixed(4)} SOL
                 </p>
               </div>
             </div>
