@@ -97,30 +97,31 @@ const TransactionAnalytics = () => {
 							const accountIndex = tx.transaction.message.accountKeys.findIndex((key) => key.pubkey.equals(publicKey));
 
 							if (accountIndex >= 0) {
-								// Calculate direct SOL transfer balance change
-								const solBalanceChange = (tx.meta.postBalances[accountIndex] - tx.meta.preBalances[accountIndex]);
+								// For token transfers, we should only consider the token transaction calculations
+								// not the SOL balance change (which would double count)
+								let balanceChangeInSol = 0;
+								
+								if (determineTransactionType(tx) === "Token Transfer") {
+									// Only use token changes for token transfers
+									const tokenChange = tokenTransactions.reduce((sum, tx) => {
+										const change = tx.type === 'buy' ? -Math.abs(tx.price || 0) : Math.abs(tx.price || 0);
+										return sum + (change * LAMPORTS_PER_SOL);
+									}, 0);
+									balanceChangeInSol = tokenChange / LAMPORTS_PER_SOL;
+								} else if (determineTransactionType(tx) === "NFT Transaction") {
+									// Only use NFT changes for NFT transactions
+									const nftChange = nftTransactions.reduce((sum, tx) => {
+										const change = tx.type === 'buy' ? -Math.abs(tx.price) : Math.abs(tx.price);
+										return sum + (change * LAMPORTS_PER_SOL);
+									}, 0);
+									balanceChangeInSol = nftChange / LAMPORTS_PER_SOL;
+								} else {
+									// For regular SOL transfers, use the direct balance change
+									const solBalanceChange = (tx.meta.postBalances[accountIndex] - tx.meta.preBalances[accountIndex]);
+									balanceChangeInSol = solBalanceChange / LAMPORTS_PER_SOL;
+								}
 
-								// Add balance changes from token and NFT transactions
-								const tokenChange = tokenTransactions.reduce((sum, tx) => {
-									// For buys, we spend SOL (negative)
-									// For sells, we receive SOL (positive)
-									const change = tx.type === 'buy' ? -Math.abs(tx.price || 0) : Math.abs(tx.price || 0);
-									return sum + (change * LAMPORTS_PER_SOL);
-								}, 0);
-
-								const nftChange = nftTransactions.reduce((sum, tx) => {
-									// For buys, we spend SOL (negative)
-									// For sells, we receive SOL (positive)
-									const change = tx.type === 'buy' ? -Math.abs(tx.price) : Math.abs(tx.price);
-									return sum + (change * LAMPORTS_PER_SOL);
-								}, 0);
-
-								// Calculate total balance change including all transaction types
-								const totalBalanceChange = solBalanceChange + tokenChange + nftChange;
-
-								// Convert to SOL and update totals
-								const balanceChangeInSol = totalBalanceChange / LAMPORTS_PER_SOL;
-
+								// Update totals based on the transaction type
 								if (balanceChangeInSol > 0) {
 									totalProfit += balanceChangeInSol;
 								} else if (balanceChangeInSol < 0) {

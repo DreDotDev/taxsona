@@ -78,6 +78,10 @@ const OverviewStats = ({ data }: { data: AnalyticsData }) => {
     }
   });
 
+  // Calculate net profit/loss (only from token trades)
+  const netProfitLoss = totalTokenProfit - totalTokenLoss;
+  const isProfit = netProfitLoss > 0;
+
   return (
     <div className="rounded-lg bg-dark-secondary dark:bg-dark-secondary p-4 shadow-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <StatCard
@@ -85,6 +89,13 @@ const OverviewStats = ({ data }: { data: AnalyticsData }) => {
         value={`${totalVolumeSol.toFixed(2)} SOL`}
         icon="📊"
         subtitle="All-time trading volume"
+      />
+      <StatCard
+        title="Net Trading P/L"
+        value={`${isProfit ? '+' : ''}${netProfitLoss.toFixed(4)} SOL`}
+        icon="💰"
+        subtitle="Net profit/loss from token trading"
+        valueClassName={isProfit ? 'text-green-400' : 'text-red-400'}
       />
       <ExpandableStatCard
         title="Token Profit"
