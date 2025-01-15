@@ -9,6 +9,7 @@ import OverviewStats from "./dashboard/OverviewStats";
 import TransactionLog from "./dashboard/TransactionLog";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import TransactionReport from "./reports/TransactionReport";
+import TaxEstimate from "./dashboard/TaxEstimate";
 
 const Dashboard = ({ data }: { data: AnalyticsData }) => {
 	const [activeTab, setActiveTab] = useState("overview");
@@ -19,6 +20,7 @@ const Dashboard = ({ data }: { data: AnalyticsData }) => {
 		{ id: "tokens", label: "Tokens", icon: "🔄" },
 		{ id: "nfts", label: "NFTs", icon: "🖼️" },
 		{ id: "transactions", label: "Transactions", icon: "📝" },
+		{ id: "tax", label: "Tax Estimate", icon: "💰" },
 	];
 
 	return (
@@ -57,17 +59,24 @@ const Dashboard = ({ data }: { data: AnalyticsData }) => {
 				<div className={`${activeTab === "transactions" ? "block" : "hidden"}`}>
 					<TransactionLog transactions={data.transactionLog} />
 				</div>
+				<div className={`${activeTab === "tax" ? "block" : "hidden"}`}>
+					<TaxEstimate data={data} walletAddress={data.walletAddress} />
+				</div>
 			</div>
 
-			<div className="flex justify-end">
-				<PDFDownloadLink 
-					document={<TransactionReport data={data} />} 
-					fileName={`transaction-report-${data.walletAddress.slice(0, 8)}.pdf`} 
-					className="px-4 py-2 rounded-lg font-mono text-sm bg-black/20 hover:bg-black/30 border border-solana-purple/10 hover:border-solana-purple/30 transition-all"
-				>
-					<span>Export PDF Report</span>
-				</PDFDownloadLink>
-			</div>
+			{activeTab === "overview" && (
+				<div className="flex justify-end mb-4">
+					<PDFDownloadLink
+						document={<TransactionReport data={data} />}
+						fileName={`transaction-report-${data.walletAddress.slice(0, 8)}.pdf`}
+						className="px-4 py-2 rounded-lg font-mono text-sm bg-gradient-to-r from-solana-purple to-solana-green hover:opacity-90 transition-opacity"
+					>
+						{({ blob, url, loading, error }) =>
+							loading ? 'Generating Report...' : 'Download PDF Report'
+						}
+					</PDFDownloadLink>
+				</div>
+			)}
 		</div>
 	);
 };
