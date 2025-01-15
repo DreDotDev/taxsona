@@ -10,8 +10,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-geist-sans)', ...defaultTheme.fontFamily.sans],
-        mono: ['var(--font-geist-mono)', ...defaultTheme.fontFamily.mono],
+        sans: ['var(--font-space-grotesk)', ...defaultTheme.fontFamily.sans],
+        mono: ['var(--font-space-grotesk)', ...defaultTheme.fontFamily.mono],
       },
       animation: {
         'gradient-xy': 'gradient-xy 15s ease infinite',

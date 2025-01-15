@@ -22,11 +22,11 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-geist-mono);
+  font-family: var(--font-space-grotesk);
 }
 
 .wallet-adapter-button {
-  font-family: var(--font-geist-mono) !important;
+  font-family: var(--font-space-grotesk) !important;
   background: linear-gradient(to right, #9945FF, #14F195) !important;
   transition: all 0.3s ease !important;
 }
